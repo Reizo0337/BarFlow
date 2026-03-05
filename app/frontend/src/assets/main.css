@@ -1,1 +1,17 @@
 @import "tailwindcss";
+
+html,
+body,
+#app {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background-color: #0f172a;
+    /* matches slate-900 */
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}

@@ -1,4 +1,5 @@
-import { contextBridge, ipcRenderer } from "electron";
+const { ipcRenderer, contextBridge } = require("electron");
+console.log("Preload: Script loaded and initializing bridge");
 contextBridge.exposeInMainWorld("ipcRenderer", {
   on(...args) {
     const [channel, listener] = args;
@@ -15,7 +16,8 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
   invoke(...args) {
     const [channel, ...omit] = args;
     return ipcRenderer.invoke(channel, ...omit);
-  }
-  // You can expose other apts you need here.
-  // ...
+  },
+  minimize: () => ipcRenderer.send("window-minimize"),
+  maximize: () => ipcRenderer.send("window-maximize"),
+  close: () => ipcRenderer.send("window-close")
 });

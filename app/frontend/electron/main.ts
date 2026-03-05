@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, Menu, ipcMain } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -21,11 +21,48 @@ let win: BrowserWindow | null
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 
 function createWindow() {
+    Menu.setApplicationMenu(null)
     win = new BrowserWindow({
         icon: path.join(process.env.VITE_PUBLIC || '', 'favicon.ico'),
+        frame: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
+            nodeIntegration: false,
+            contextIsolation: true,
         },
+    })
+
+    if (VITE_DEV_SERVER_URL) {
+        win.webContents.openDevTools()
+    }
+
+    ipcMain.on('window-minimize', (event) => {
+        console.log('Main: minimize requested')
+        const browserWindow = BrowserWindow.fromWebContents(event.sender)
+        browserWindow?.minimize()
+    })
+    ipcMain.on('window-maximize', (event) => {
+        console.log('Main: maximize/unmaximize requested')
+        const browserWindow = BrowserWindow.fromWebContents(event.sender)
+        if (browserWindow?.isMaximized()) {
+            browserWindow.unmaximize()
+        } else {
+            browserWindow?.maximize()
+        }
+    })
+    ipcMain.on('window-close', (event) => {
+        console.log('Main: close requested')
+        const browserWindow = BrowserWindow.fromWebContents(event.sender)
+        browserWindow?.close()
+    })
+
+    win.on('maximize', () => {
+        console.log('Main: Window maximized')
+        win?.webContents.send('window-maximized', true)
+    })
+    win.on('unmaximize', () => {
+        console.log('Main: Window unmaximized')
+        win?.webContents.send('window-maximized', false)
     })
 
     // Test active push message to Renderer-process.
