@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { Minus, Square, X, Copy } from 'lucide-vue-next'
+import { useThemeStore } from '@/stores/theme'
+import { useUIStore } from '@/stores/ui'
+import { Minus, Square, X, Copy, Sun, Moon, Menu } from 'lucide-vue-next'
 
-const isMaximized = ref(false)
+const themeStore = useThemeStore()
+const uiStore = useUIStore()
 
 const minimize = () => {
   if (window.ipcRenderer) {
@@ -22,16 +24,6 @@ const close = () => {
   }
 }
 
-// Optional: listen for actual maximize events to keep state in sync
-onMounted(() => {
-  if (window.ipcRenderer) {
-    window.ipcRenderer.on('window-maximized', (_event: any, value: boolean) => {
-      isMaximized.value = value
-    })
-  }
-})
-
-// Type helper for the template
 declare global {
   interface Window {
     ipcRenderer: any;
@@ -39,43 +31,55 @@ declare global {
 }
 </script>
 
+
 <template>
   <div 
-    class="flex items-center justify-between h-10 bg-slate-900 text-slate-400 select-none border-b border-slate-800" 
+    class="flex items-center justify-between lg:justify-end h-14 bg-card text-foreground select-none border-b border-border transition-colors duration-300 px-4" 
     style="-webkit-app-region: drag"
   >
-    <!-- App Title / Logo -->
-    <div class="flex items-center px-4 gap-2">
-      <div class="w-5 h-5 bg-indigo-600 rounded flex items-center justify-center">
-        <span class="text-[10px] text-white font-bold italic">B</span>
-      </div>
-      <span class="text-xs font-semibold tracking-wide text-slate-300">BarFlow</span>
-    </div>
+    <!-- Mobile Menu Toggle -->
+    <button 
+      @click="uiStore.toggleMobileSidebar(true)"
+      class="md:hidden w-10 h-10 flex items-center justify-center rounded-xl text-foreground/50 hover:text-primary hover:bg-primary/10 transition-all active:scale-95"
+      style="-webkit-app-region: no-drag"
+    >
+      <Menu class="w-6 h-6" />
+    </button>
 
-    <!-- Window Controls -->
     <div class="flex h-full items-stretch" style="-webkit-app-region: no-drag">
+      <!-- Dark Mode Toggle -->
+      <button 
+        @click="themeStore.toggleTheme" 
+        class="flex items-center justify-center w-14 hover:bg-primary/10 transition-colors text-foreground"
+        title="Cambiar Tema"
+      >
+        <Sun v-if="themeStore.isDark" class="w-5 h-5 text-amber-400" />
+        <Moon v-else class="w-5 h-5 text-indigo-600" />
+      </button>
+
+      <!-- Window Controls -->
       <button 
         @click="minimize" 
-        class="flex items-center justify-center w-12 hover:bg-slate-800 transition-colors"
+        class="flex items-center justify-center w-14 hover:bg-primary/10 transition-colors"
         title="Minimizar"
       >
-        <Minus class="w-3.5 h-3.5" />
+        <Minus class="w-5 h-5" />
       </button>
 
       <button 
         @click="toggleMaximize" 
-        class="flex items-center justify-center w-12 hover:bg-slate-800 transition-colors"
+        class="flex items-center justify-center w-14 hover:bg-primary/10 transition-colors"
         title="Maximizar"
       >
-        <component :is="isMaximized ? Copy : Square" class="w-3 h-3" :class="{'rotate-180': isMaximized}" />
+        <component :is="uiStore.isMaximized ? Copy : Square" class="w-4 h-4" />
       </button>
 
       <button 
         @click="close" 
-        class="flex items-center justify-center w-12 hover:bg-red-600 hover:text-white transition-colors"
+        class="flex items-center justify-center w-14 hover:bg-red-500 hover:text-white transition-colors"
         title="Cerrar"
       >
-        <X class="w-4 h-4" />
+        <X class="w-5 h-5" />
       </button>
     </div>
   </div>
