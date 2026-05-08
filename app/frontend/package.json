@@ -2,7 +2,6 @@
   "name": "barflow",
   "version": "0.0.0",
   "private": true,
-  "main": "dist-electron/main.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,9 +18,12 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",
+    "axios": "^1.13.6",
+    "chart.js": "^4.5.1",
     "lucide-vue-next": "^0.577.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.29",
+    "vue-chartjs": "^5.3.3",
     "vue-router": "^5.0.3"
   },
   "devDependencies": {
@@ -36,7 +38,6 @@
     "@vue/tsconfig": "^0.8.1",
     "autoprefixer": "^10.4.27",
     "chromedriver": "^146.0.0",
-    "electron": "^40.7.0",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-oxlint": "~1.50.0",
@@ -54,8 +55,6 @@
     "ts-node": "^10.9.2",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
-    "vite-plugin-electron": "^0.29.0",
-    "vite-plugin-electron-renderer": "^0.14.6",
     "vite-plugin-nightwatch": "^0.2.12",
     "vite-plugin-vue-devtools": "^8.0.6",
     "vitest": "^4.0.18",

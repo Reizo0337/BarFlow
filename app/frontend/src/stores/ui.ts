@@ -12,10 +12,38 @@ export const useUIStore = defineStore('ui', () => {
                 isMaximized.value = value
             })
         }
+
+        // Handle ESC key or browser button exiting fullscreen
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                isZenMode.value = false
+            }
+        })
     })
+
+    const isZenMode = ref(false)
 
     const toggleSidebar = () => {
         isSidebarCollapsed.value = !isSidebarCollapsed.value
+    }
+
+    const toggleZenMode = async (value?: boolean) => {
+        const newValue = typeof value === 'boolean' ? value : !isZenMode.value
+        isZenMode.value = newValue
+
+        try {
+            if (newValue) {
+                if (!document.fullscreenElement) {
+                    await document.documentElement.requestFullscreen()
+                }
+            } else {
+                if (document.fullscreenElement) {
+                    await document.exitFullscreen()
+                }
+            }
+        } catch (e) {
+            console.error('Error toggling fullscreen:', e)
+        }
     }
 
     const toggleMobileSidebar = (value?: boolean) => {
@@ -30,7 +58,9 @@ export const useUIStore = defineStore('ui', () => {
         isMaximized,
         isSidebarCollapsed,
         isMobileSidebarOpen,
+        isZenMode,
         toggleSidebar,
-        toggleMobileSidebar
+        toggleMobileSidebar,
+        toggleZenMode
     }
 })

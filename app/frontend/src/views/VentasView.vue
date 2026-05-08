@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
     Search, 
     Plus, 
@@ -14,38 +14,60 @@ import {
     ChevronDown,
     CircleDollarSign,
     LayoutGrid,
-    ReceiptText
+    ReceiptText,
+    Loader2,
+    Maximize2,
+    Minimize2
 } from 'lucide-vue-next'
+import { useInventoryStore } from '@/stores/inventory'
+import { useAuthStore } from '@/stores/auth'
+import { useUIStore } from '@/stores/ui'
+import { useShiftsStore } from '@/stores/shifts'
+import api from '@/services/api'
 
-// --- Mock Data ---
-const categories = [
-    { id: 'all', name: 'Todos', icon: Grid2X2 },
-    { id: 'drinks', name: 'Bebidas', icon: Wine },
-    { id: 'coffee', name: 'Cafetería', icon: Coffee },
-    { id: 'food', name: 'Comida', icon: Utensils },
-]
-
-const products = ref([
-    { id: 1, name: 'Cerveza Artesana', price: 4.5, category: 'drinks', image: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=300&h=300&fit=crop' },
-    { id: 2, name: 'Café Con Leche', price: 2.2, category: 'coffee', image: 'https://images.unsplash.com/photo-1541167760496-162955ed8a9f?w=300&h=300&fit=crop' },
-    { id: 3, name: 'Hamburguesa BarFlow', price: 12.5, category: 'food', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&h=300&fit=crop' },
-    { id: 4, name: 'Vino Tinto Copa', price: 3.8, category: 'drinks', image: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=300&h=300&fit=crop' },
-    { id: 5, name: 'Tarta de Queso', price: 5.5, category: 'food', image: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=300&h=300&fit=crop' },
-    { id: 6, name: 'Zumo de Naranja', price: 3.0, category: 'drinks', image: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=300&h=300&fit=crop' },
-    { id: 7, name: 'Pizza Prosciutto', price: 10.9, category: 'food', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=300&h=300&fit=crop' },
-    { id: 8, name: 'Coca Cola', price: 2.5, category: 'drinks', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=300&h=300&fit=crop' },
-])
+const inventoryStore = useInventoryStore()
+const authStore = useAuthStore()
+const uiStore = useUIStore()
+const shiftsStore = useShiftsStore()
 
 // --- State ---
+const now = ref(new Date())
+let timer: any = null
+
+const hoursWorked = computed(() => {
+    if (!shiftsStore.currentShift) return '00:00:00'
+    const start = new Date(shiftsStore.currentShift.startTime)
+    const diff = now.value.getTime() - start.getTime()
+    
+    const h = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0')
+    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0')
+    const s = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0')
+    
+    return `${h}:${m}:${s}`
+})
+
 const selectedCategory = ref('all')
 const searchQuery = ref('')
 const cart = ref<any[]>([])
 const activeTab = ref<'products' | 'cart'>('products')
+const isProcessing = ref(false)
+
+onMounted(async () => {
+    if (inventoryStore.products.length === 0) {
+        await inventoryStore.fetchProducts()
+    }
+    // Auto-activate Zen Mode when entering sales terminal
+    uiStore.toggleZenMode(true)
+})
+
+onUnmounted(() => {
+    uiStore.toggleZenMode(false)
+})
 
 // --- Computed ---
 const filteredProducts = computed(() => {
-    return products.value.filter(p => {
-        const matchesCategory = selectedCategory.value === 'all' || p.category === selectedCategory.value
+    return inventoryStore.products.filter(p => {
+        const matchesCategory = selectedCategory.value === 'all' || p.category.toLowerCase() === selectedCategory.value.toLowerCase()
         const matchesSearch = p.name.toLowerCase().includes(searchQuery.value.toLowerCase())
         return matchesCategory && matchesSearch
     })
@@ -83,10 +105,44 @@ const removeFromCart = (productId: number) => {
 const clearCart = () => {
     cart.value = []
 }
+
+const handleCheckout = async () => {
+    if (cart.value.length === 0) return
+    
+    isProcessing.value = true
+    try {
+        const invoiceData = {
+            invoiceNumber: `INV-${Date.now()}`,
+            type: 'out',
+            clientName: 'Consumidor Final',
+            amount: cartTotal.value,
+            status: 'paid'
+        }
+        
+        await api.post('/invoices', invoiceData)
+        
+        // Update stock for each item
+        for (const item of cart.value) {
+            await inventoryStore.updateStock(item.id, item.stock - item.quantity)
+        }
+        
+        alert('Venta realizada con éxito')
+        clearCart()
+        activeTab.value = 'products'
+    } catch (error) {
+        console.error('Checkout error:', error)
+        alert('Error al procesar la venta')
+    } finally {
+        isProcessing.value = false
+    }
+}
 </script>
 
 <template>
-    <div class="h-full flex flex-col lg:flex-row gap-4 lg:gap-6 animate-in fade-in duration-500 overflow-hidden relative">
+    <div 
+        class="h-full flex flex-col lg:flex-row gap-4 lg:gap-6 animate-in fade-in duration-500 overflow-hidden relative"
+        :class="uiStore.isZenMode ? 'p-4 lg:p-8 bg-background' : ''"
+    >
         
         <!-- Mobile Tab Switcher -->
         <div class="lg:hidden flex p-1 bg-accent/20 rounded-2xl mb-2 flex-shrink-0">
@@ -119,19 +175,9 @@ const clearCart = () => {
             ]"
         >
             
-            <!-- Top Controls: Search & Categories -->
-            <div class="bg-card p-4 rounded-3xl border border-border shadow-sm space-y-4">
-                <div class="relative">
-                    <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/30" />
-                    <input 
-                        v-model="searchQuery"
-                        type="text" 
-                        placeholder="Buscar productos..." 
-                        class="w-full pl-12 pr-6 py-3 lg:py-4 bg-accent/30 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm lg:text-base"
-                    >
-                </div>
-
-                <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            <!-- Top Controls: Categories & Zen Mode -->
+            <div class="bg-card p-2 lg:p-3 rounded-3xl border border-border shadow-sm flex items-center justify-between gap-4">
+                <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 flex-1">
                     <button 
                         v-for="cat in categories" 
                         :key="cat.id"
@@ -143,6 +189,15 @@ const clearCart = () => {
                         {{ cat.name }}
                     </button>
                 </div>
+
+                <button 
+                    @click="uiStore.toggleZenMode()"
+                    class="w-10 h-10 lg:w-12 lg:h-12 flex-shrink-0 flex items-center justify-center rounded-2xl bg-accent/30 text-foreground/50 hover:bg-primary/10 hover:text-primary transition-all group"
+                    title="Modo Zen (Pantalla Completa)"
+                >
+                    <Maximize2 v-if="!uiStore.isZenMode" class="w-5 h-5 lg:w-6 lg:h-6 group-hover:scale-110 transition-transform" />
+                    <Minimize2 v-else class="w-5 h-5 lg:w-6 lg:h-6 group-hover:scale-110 transition-transform" />
+                </button>
             </div>
 
             <!-- Products Grid -->
@@ -163,7 +218,7 @@ const clearCart = () => {
                         </div>
                         <div class="p-3 lg:p-4">
                             <h3 class="font-bold text-foreground text-sm lg:text-base truncate">{{ product.name }}</h3>
-                            <p class="text-primary font-black text-base lg:text-lg">${{ product.price.toFixed(2) }}</p>
+                             <p class="text-primary font-black text-base lg:text-lg">${{ Number(product.price).toFixed(2) }}</p>
                         </div>
                     </button>
                 </div>
@@ -210,7 +265,7 @@ const clearCart = () => {
                     <img :src="item.image" class="w-12 h-12 lg:w-14 lg:h-14 rounded-xl object-cover shadow-sm">
                     <div class="flex-1 min-w-0">
                         <h4 class="font-bold text-xs lg:text-sm truncate">{{ item.name }}</h4>
-                        <p class="text-primary font-black text-xs lg:text-sm">${{ item.price.toFixed(2) }}</p>
+                        <p class="text-primary font-black text-xs lg:text-sm">${{ Number(item.price).toFixed(2) }}</p>
                     </div>
                     <div class="flex items-center gap-2 lg:gap-3">
                         <button @click="removeFromCart(item.id)" class="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-card border border-border flex items-center justify-center hover:bg-destructive hover:text-white transition-all active:scale-90 touch-manipulation">
@@ -229,25 +284,29 @@ const clearCart = () => {
                 <div class="space-y-1 lg:space-y-2">
                     <div class="flex justify-between text-foreground/50 font-medium text-xs lg:text-sm">
                         <span>Subtotal</span>
-                        <span>${{ (cartTotal * 0.9).toFixed(2) }}</span>
+                        <span>${{ (Number(cartTotal) * 0.9).toFixed(2) }}</span>
                     </div>
                     <div class="flex justify-between text-foreground/50 font-medium text-xs lg:text-sm">
                         <span>IVA (10%)</span>
-                        <span>${{ (cartTotal * 0.1).toFixed(2) }}</span>
+                        <span>${{ (Number(cartTotal) * 0.1).toFixed(2) }}</span>
                     </div>
                     <div class="flex justify-between items-end pt-1 lg:pt-2">
                         <span class="font-bold text-base lg:text-lg">Total</span>
-                        <span class="font-black text-2xl lg:text-3xl text-primary">${{ cartTotal.toFixed(2) }}</span>
+                        <span class="font-black text-2xl lg:text-3xl text-primary">${{ Number(cartTotal).toFixed(2) }}</span>
                     </div>
                 </div>
 
                 <div class="flex flex-col gap-2">
                     <button 
-                        :disabled="cart.length === 0"
+                        @click="handleCheckout"
+                        :disabled="cart.length === 0 || isProcessing"
                         class="w-full py-4 lg:py-5 bg-primary text-white rounded-2xl lg:rounded-[1.5rem] font-black text-lg lg:text-xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:shadow-none transition-all flex items-center justify-center gap-3 touch-manipulation"
                     >
-                        Cobrar
-                        <CircleDollarSign class="w-5 h-5 lg:w-6 lg:h-6" />
+                        <Loader2 v-if="isProcessing" class="w-6 h-6 animate-spin" />
+                        <template v-else>
+                            Cobrar
+                            <CircleDollarSign class="w-5 h-5 lg:w-6 lg:h-6" />
+                        </template>
                     </button>
                     
                     <button 

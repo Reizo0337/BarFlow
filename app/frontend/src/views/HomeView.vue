@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
     LayoutGrid, 
     UserCheck, 
@@ -15,13 +15,57 @@ import {
 import { RouterLink } from 'vue-router'
 import Card from '@/components/layout/Card.vue'
 
-// Mock state
-const employeeName = ref('Juan Pérez')
-const hoursWorked = ref('32h 45m')
-const isWorking = ref(false)
+import { useAuthStore } from '@/stores/auth'
+import { useInvoicesStore } from '@/stores/invoices'
+import { useShiftsStore } from '@/stores/shifts'
+import { useRouter } from 'vue-router'
 
-const startShift = () => { isWorking.value = true }
-const stopShift = () => { isWorking.value = false }
+const authStore = useAuthStore()
+const invoicesStore = useInvoicesStore()
+const shiftsStore = useShiftsStore()
+const router = useRouter()
+
+// State
+const employeeName = computed(() => authStore.user?.name || 'Invitado')
+const now = ref(new Date())
+let timer: any = null
+
+const hoursWorked = computed(() => {
+    // totalMs is past shifts today in ms
+    let totalMs = shiftsStore.dailyHours;
+    
+    // If there is an active shift, add its current duration
+    if (shiftsStore.currentShift) {
+        const start = new Date(shiftsStore.currentShift.startTime)
+        totalMs += now.value.getTime() - start.getTime()
+    }
+
+    const hours = Math.floor(totalMs / (1000 * 60 * 60))
+    const minutes = Math.floor((totalMs % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((totalMs % (1000 * 60)) / 1000)
+    
+    return `${hours}h ${minutes}m ${seconds}s`
+})
+
+const handleLogout = () => {
+    authStore.logout()
+    router.push('/portal')
+}
+
+onMounted(() => {
+    invoicesStore.fetchInvoices()
+    shiftsStore.fetchCurrentShift()
+    timer = setInterval(() => {
+        now.value = new Date()
+    }, 1000)
+})
+
+onUnmounted(() => {
+    if (timer) clearInterval(timer)
+})
+
+const startShift = async () => { await shiftsStore.startShift() }
+const stopShift = async () => { await shiftsStore.endShift() }
 </script>
 
 <template>
@@ -37,16 +81,22 @@ const stopShift = () => { isWorking.value = false }
                 </div>
                 
                 <!-- Main Action Button (TOUCH-FIRST - LARGE BUTTON) -->
-                <RouterLink 
-                    to="/ventas" 
-                    class="flex items-center justify-between w-full md:w-fit gap-6 pl-8 pr-6 py-5 bg-primary text-white rounded-[2rem] font-black text-xl hover:scale-[1.02] transition-all shadow-2xl shadow-primary/30 active:scale-95 group overflow-hidden relative"
-                >
-                    <div class="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                    <span class="relative z-10">Portal de Ventas</span>
-                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center relative z-10">
-                        <ChevronRight class="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                <div class="relative group w-full md:w-fit">
+                    <RouterLink 
+                        to="/app/ventas" 
+                        class="flex items-center justify-between w-full md:w-fit gap-6 pl-8 pr-6 py-5 bg-primary text-white rounded-[2rem] font-black text-xl hover:scale-[1.02] transition-all shadow-2xl shadow-primary/30 active:scale-95 group overflow-hidden relative"
+                        :class="{ 'opacity-50 grayscale pointer-events-none': !shiftsStore.currentShift }"
+                    >
+                        <div class="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                        <span class="relative z-10">Portal de Ventas</span>
+                        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center relative z-10">
+                            <ChevronRight class="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </RouterLink>
+                    <div v-if="!shiftsStore.currentShift" class="absolute -top-10 left-0 bg-destructive text-white text-[10px] font-black px-3 py-1 rounded-full animate-bounce">
+                        DEBES INICIAR JORNADA PRIMERO
                     </div>
-                </RouterLink>
+                </div>
             </div>
 
             <!-- Session Controls Card -->
@@ -56,14 +106,14 @@ const stopShift = () => { isWorking.value = false }
                         <Clock class="w-6 h-6 text-primary" />
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-xs font-bold uppercase text-foreground/40 leading-none">Esta semana</span>
+                        <span class="text-xs font-bold uppercase text-foreground/40 leading-none">Hoy</span>
                         <span class="text-xl font-black text-foreground">{{ hoursWorked }}</span>
                     </div>
                 </div>
                 
                 <div class="flex flex-1 sm:flex-initial">
                     <button 
-                        v-if="!isWorking"
+                        v-if="!shiftsStore.currentShift"
                         @click="startShift"
                         class="flex-1 flex items-center justify-center gap-3 px-8 py-5 bg-primary text-white rounded-2xl font-black text-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 active:scale-95 touch-manipulation"
                     >
@@ -101,15 +151,15 @@ const stopShift = () => { isWorking.value = false }
             <Card class="min-h-[140px]">
                 <template #icon><Receipt class="w-7 h-7" /></template>
                 <template #title>Ventas de Hoy</template>
-                <template #content>42</template>
-                <template #footer>+12% respecto a ayer</template>
+                <template #content>{{ invoicesStore.todaySalesCount }}</template>
+                <template #footer>Transacciones procesadas hoy</template>
             </Card>
 
             <Card class="min-h-[140px]">
                 <template #icon><CircleDollarSign class="w-7 h-7" /></template>
                 <template #title>Recaudación Hoy</template>
-                <template #content>$1,240.50</template>
-                <template #footer>Promedio $29.50 por venta</template>
+                <template #content>${{ invoicesStore.todayRevenue.toFixed(2) }}</template>
+                <template #footer>Ingresos brutos del día</template>
             </Card>
 
             <Card class="min-h-[140px]">
@@ -120,7 +170,7 @@ const stopShift = () => { isWorking.value = false }
             </Card>
 
             <!-- Action Card for Exit -->
-            <button class="w-full text-left group touch-manipulation">
+            <button @click="handleLogout" class="w-full text-left group touch-manipulation">
                 <Card class="group-hover:border-destructive/30 group-hover:shadow-lg group-hover:shadow-destructive/5 transition-all min-h-[140px]">
                     <template #icon>
                         <LogOut class="w-7 h-7 text-destructive group-hover:scale-110 transition-transform" />
