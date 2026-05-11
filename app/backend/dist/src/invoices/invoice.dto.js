@@ -17,15 +17,16 @@ class CreateInvoiceDto {
     clientName;
     amount;
     status;
+    paymentMethod;
 }
 exports.CreateInvoiceDto = CreateInvoiceDto;
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateInvoiceDto.prototype, "invoiceNumber", void 0);
 __decorate([
-    (0, class_validator_1.IsEnum)(['in', 'out']),
+    (0, class_validator_1.IsEnum)(['in', 'out', 'sale', 'purchase']),
     __metadata("design:type", String)
 ], CreateInvoiceDto.prototype, "type", void 0);
 __decorate([
@@ -43,6 +44,11 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateInvoiceDto.prototype, "status", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "paymentMethod", void 0);
 class UpdateInvoiceDto {
     invoiceNumber;
     type;

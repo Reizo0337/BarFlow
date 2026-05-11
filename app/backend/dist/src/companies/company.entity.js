@@ -16,6 +16,13 @@ let Company = class Company {
     id;
     name;
     companyCode;
+    currency;
+    legalName;
+    nif;
+    address;
+    phone;
+    vatRate;
+    nextInvoiceNumber;
     users;
 };
 exports.Company = Company;
@@ -31,6 +38,34 @@ __decorate([
     (0, typeorm_1.Column)({ unique: true }),
     __metadata("design:type", String)
 ], Company.prototype, "companyCode", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: '€' }),
+    __metadata("design:type", String)
+], Company.prototype, "currency", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Company.prototype, "legalName", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Company.prototype, "nif", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Company.prototype, "address", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Company.prototype, "phone", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'decimal', precision: 5, scale: 2, default: 10.00 }),
+    __metadata("design:type", Number)
+], Company.prototype, "vatRate", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: 1 }),
+    __metadata("design:type", Number)
+], Company.prototype, "nextInvoiceNumber", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => user_entity_1.User, (user) => user.company),
     __metadata("design:type", Array)

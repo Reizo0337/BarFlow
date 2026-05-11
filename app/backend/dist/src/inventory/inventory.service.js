@@ -28,6 +28,14 @@ let InventoryService = class InventoryService {
             relations: ['company']
         });
     }
+    async findAllCategories(companyId) {
+        const products = await this.productRepository.find({
+            where: { company: { id: companyId } },
+            select: ['category']
+        });
+        const categories = products.map(p => p.category);
+        return [...new Set(categories)];
+    }
     findOne(id, companyId) {
         return this.productRepository.findOne({
             where: { id, company: { id: companyId } }

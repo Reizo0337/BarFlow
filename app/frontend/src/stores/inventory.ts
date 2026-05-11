@@ -14,6 +14,7 @@ export interface Product {
 
 export const useInventoryStore = defineStore('inventory', () => {
     const products = ref<Product[]>([])
+    const categories = ref<string[]>([])
     const isLoading = ref(false)
 
     const fetchProducts = async () => {
@@ -21,6 +22,10 @@ export const useInventoryStore = defineStore('inventory', () => {
         try {
             const response = await api.get('/inventory')
             products.value = response.data
+            
+            // Also fetch categories
+            const catResponse = await api.get('/inventory/categories')
+            categories.value = catResponse.data
         } catch (error) {
             console.error('Error fetching inventory:', error)
         } finally {
@@ -39,6 +44,7 @@ export const useInventoryStore = defineStore('inventory', () => {
 
     return {
         products,
+        categories,
         isLoading,
         fetchProducts,
         updateStock

@@ -10,6 +10,7 @@ import { SeedService } from './common/seed.service';
 import { CompaniesModule } from './companies/companies.module';
 import { AuthModule } from './auth/auth.module';
 import { ShiftsModule } from './shifts/shifts.module';
+import { TablesModule } from './tables/tables.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ShiftsModule } from './shifts/shifts.module';
     InvoicesModule,
     CompaniesModule,
     ShiftsModule,
+    TablesModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService],

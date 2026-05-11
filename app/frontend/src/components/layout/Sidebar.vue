@@ -95,7 +95,6 @@ const isExpanded = computed(() => !uiStore.isSidebarCollapsed)
                     <li v-for="link in [
                         { to: '/app/inventario', icon: Box, label: 'Inventario' },
                         { to: '/app/facturas', icon: FileText, label: 'Facturas' },
-                        { to: '/app/ajustes', icon: Settings, label: 'Ajustes' },
                         { to: '/app/admin', icon: ShieldCheck, label: 'Panel Admin' }
                     ]" :key="link.to">
                         <RouterLink 

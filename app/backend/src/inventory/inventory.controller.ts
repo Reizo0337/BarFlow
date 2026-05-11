@@ -16,6 +16,11 @@ export class InventoryController {
         return this.inventoryService.findAll(req.user.companyId);
     }
 
+    @Get('categories')
+    findAllCategories(@Request() req) {
+        return this.inventoryService.findAllCategories(req.user.companyId);
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string, @Request() req) {
         return this.inventoryService.findOne(+id, req.user.companyId);

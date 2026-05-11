@@ -2,11 +2,11 @@ import { IsString, IsNotEmpty, IsNumber, IsEnum, IsOptional, Min } from 'class-v
 
 export class CreateInvoiceDto {
     @IsString()
-    @IsNotEmpty()
-    invoiceNumber: string;
+    @IsOptional()
+    invoiceNumber?: string;
 
-    @IsEnum(['in', 'out'])
-    type: 'in' | 'out';
+    @IsEnum(['in', 'out', 'sale', 'purchase'])
+    type: 'in' | 'out' | 'sale' | 'purchase';
 
     @IsString()
     @IsNotEmpty()
@@ -19,6 +19,10 @@ export class CreateInvoiceDto {
     @IsEnum(['paid', 'pending', 'cancelled'])
     @IsOptional()
     status?: 'paid' | 'pending' | 'cancelled';
+
+    @IsString()
+    @IsOptional()
+    paymentMethod?: string;
 }
 
 export class UpdateInvoiceDto {

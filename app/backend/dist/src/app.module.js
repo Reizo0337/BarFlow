@@ -19,6 +19,7 @@ const seed_service_1 = require("./common/seed.service");
 const companies_module_1 = require("./companies/companies.module");
 const auth_module_1 = require("./auth/auth.module");
 const shifts_module_1 = require("./shifts/shifts.module");
+const tables_module_1 = require("./tables/tables.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -48,6 +49,7 @@ exports.AppModule = AppModule = __decorate([
             invoices_module_1.InvoicesModule,
             companies_module_1.CompaniesModule,
             shifts_module_1.ShiftsModule,
+            tables_module_1.TablesModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService, seed_service_1.SeedService],

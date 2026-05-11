@@ -26,6 +26,9 @@ let InventoryController = class InventoryController {
     findAll(req) {
         return this.inventoryService.findAll(req.user.companyId);
     }
+    findAllCategories(req) {
+        return this.inventoryService.findAllCategories(req.user.companyId);
+    }
     findOne(id, req) {
         return this.inventoryService.findOne(+id, req.user.companyId);
     }
@@ -47,6 +50,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], InventoryController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('categories'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], InventoryController.prototype, "findAllCategories", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),

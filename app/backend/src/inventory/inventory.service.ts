@@ -18,6 +18,16 @@ export class InventoryService {
         });
     }
 
+    async findAllCategories(companyId: number): Promise<string[]> {
+        const products = await this.productRepository.find({
+            where: { company: { id: companyId } },
+            select: ['category']
+        });
+
+        const categories = products.map(p => p.category);
+        return [...new Set(categories)];
+    }
+
     findOne(id: number, companyId: number): Promise<Product | null> {
         return this.productRepository.findOne({
             where: { id, company: { id: companyId } }
@@ -35,7 +45,7 @@ export class InventoryService {
     async update(id: number, updateProductDto: UpdateProductDto, companyId: number): Promise<Product | null> {
         const product = await this.findOne(id, companyId);
         if (!product) return null;
-        
+
         await this.productRepository.update(id, updateProductDto);
         return this.findOne(id, companyId);
     }

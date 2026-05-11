@@ -17,10 +17,13 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const invoice_entity_1 = require("./invoice.entity");
+const company_entity_1 = require("../companies/company.entity");
 let InvoicesService = class InvoicesService {
     invoiceRepository;
-    constructor(invoiceRepository) {
+    companyRepository;
+    constructor(invoiceRepository, companyRepository) {
         this.invoiceRepository = invoiceRepository;
+        this.companyRepository = companyRepository;
     }
     findAll(companyId) {
         return this.invoiceRepository.find({
@@ -33,12 +36,22 @@ let InvoicesService = class InvoicesService {
             where: { id, company: { id: companyId } }
         });
     }
-    create(createInvoiceDto, companyId) {
+    async create(createInvoiceDto, companyId) {
+        const company = await this.companyRepository.findOne({ where: { id: companyId } });
+        if (!company)
+            throw new Error('Company not found');
+        const currentNumber = company.nextInvoiceNumber;
+        const formattedNumber = `FAC-${new Date().getFullYear()}-${currentNumber.toString().padStart(5, '0')}`;
         const invoice = this.invoiceRepository.create({
             ...createInvoiceDto,
+            invoiceNumber: formattedNumber,
             company: { id: companyId }
         });
-        return this.invoiceRepository.save(invoice);
+        const savedInvoice = await this.invoiceRepository.save(invoice);
+        await this.companyRepository.update(companyId, {
+            nextInvoiceNumber: currentNumber + 1
+        });
+        return savedInvoice;
     }
     async update(id, updateInvoiceDto, companyId) {
         const invoice = await this.findOne(id, companyId);
@@ -58,6 +71,8 @@ exports.InvoicesService = InvoicesService;
 exports.InvoicesService = InvoicesService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(invoice_entity_1.Invoice)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __param(1, (0, typeorm_1.InjectRepository)(company_entity_1.Company)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository])
 ], InvoicesService);
 //# sourceMappingURL=invoices.service.js.map

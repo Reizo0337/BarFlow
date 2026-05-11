@@ -1,9 +1,11 @@
 import { Repository } from 'typeorm';
 import { Invoice } from './invoice.entity';
 import { CreateInvoiceDto, UpdateInvoiceDto } from './invoice.dto';
+import { Company } from '../companies/company.entity';
 export declare class InvoicesService {
     private invoiceRepository;
-    constructor(invoiceRepository: Repository<Invoice>);
+    private companyRepository;
+    constructor(invoiceRepository: Repository<Invoice>, companyRepository: Repository<Company>);
     findAll(companyId: number): Promise<Invoice[]>;
     findOne(id: number, companyId: number): Promise<Invoice | null>;
     create(createInvoiceDto: CreateInvoiceDto, companyId: number): Promise<Invoice>;

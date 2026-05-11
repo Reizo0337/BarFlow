@@ -12,7 +12,7 @@ export class Invoice {
     invoiceNumber: string;
 
     @Column()
-    type: 'in' | 'out';
+    type: 'in' | 'out' | 'sale' | 'purchase';
 
     @Column()
     clientName: string;
@@ -26,6 +26,9 @@ export class Invoice {
 
     @Column({ default: 'paid' })
     status: 'paid' | 'pending' | 'cancelled';
+
+    @Column({ nullable: true })
+    paymentMethod: string;
 
     @CreateDateColumn()
     createdAt: Date;

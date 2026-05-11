@@ -44,11 +44,6 @@ const router = createRouter({
           component: () => import('../views/AdminView.vue')
         },
         {
-          path: 'ajustes',
-          name: 'ajustes',
-          component: () => import('../views/SettingsView.vue')
-        },
-        {
           path: 'inventario',
           name: 'inventario',
           component: () => import('../views/InventoryView.vue')

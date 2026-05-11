@@ -6,22 +6,21 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.InvoicesModule = void 0;
+exports.TablesModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
-const invoice_entity_1 = require("./invoice.entity");
-const company_entity_1 = require("../companies/company.entity");
-const invoices_service_1 = require("./invoices.service");
-const invoices_controller_1 = require("./invoices.controller");
-let InvoicesModule = class InvoicesModule {
+const table_order_entity_1 = require("./table-order.entity");
+const tables_service_1 = require("./tables.service");
+const tables_controller_1 = require("./tables.controller");
+let TablesModule = class TablesModule {
 };
-exports.InvoicesModule = InvoicesModule;
-exports.InvoicesModule = InvoicesModule = __decorate([
+exports.TablesModule = TablesModule;
+exports.TablesModule = TablesModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([invoice_entity_1.Invoice, company_entity_1.Company])],
-        providers: [invoices_service_1.InvoicesService],
-        controllers: [invoices_controller_1.InvoicesController],
-        exports: [invoices_service_1.InvoicesService],
+        imports: [typeorm_1.TypeOrmModule.forFeature([table_order_entity_1.TableOrder])],
+        providers: [tables_service_1.TablesService],
+        controllers: [tables_controller_1.TablesController],
+        exports: [tables_service_1.TablesService]
     })
-], InvoicesModule);
-//# sourceMappingURL=invoices.module.js.map
+], TablesModule);
+//# sourceMappingURL=tables.module.js.map

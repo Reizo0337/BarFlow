@@ -12,6 +12,27 @@ export class Company {
     @Column({ unique: true })
     companyCode: string; // Used for unique login identification
 
+    @Column({ default: '€' })
+    currency: string;
+
+    @Column({ nullable: true })
+    legalName: string;
+
+    @Column({ nullable: true })
+    nif: string;
+
+    @Column({ nullable: true })
+    address: string;
+
+    @Column({ nullable: true })
+    phone: string;
+
+    @Column({ type: 'decimal', precision: 5, scale: 2, default: 10.00 })
+    vatRate: number;
+
+    @Column({ default: 1 })
+    nextInvoiceNumber: number;
+
     @OneToMany(() => User, (user) => user.company)
     users: User[];
 }
