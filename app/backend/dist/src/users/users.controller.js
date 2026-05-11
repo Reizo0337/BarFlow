@@ -32,11 +32,11 @@ let UsersController = class UsersController {
     create(createUserDto, req) {
         return this.usersService.create(createUserDto, req.user.companyId);
     }
-    update(id, updateUserDto) {
-        return this.usersService.update(+id, updateUserDto);
+    update(id, updateUserDto, req) {
+        return this.usersService.update(+id, updateUserDto, req.user.companyId);
     }
-    remove(id) {
-        return this.usersService.remove(+id);
+    remove(id, req) {
+        return this.usersService.remove(+id, req.user.companyId);
     }
 };
 exports.UsersController = UsersController;
@@ -67,15 +67,17 @@ __decorate([
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, user_dto_1.UpdateUserDto]),
+    __metadata("design:paramtypes", [String, user_dto_1.UpdateUserDto, Object]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "remove", null);
 exports.UsersController = UsersController = __decorate([

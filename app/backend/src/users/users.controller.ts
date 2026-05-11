@@ -28,12 +28,12 @@ export class UsersController {
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-        return this.usersService.update(+id, updateUserDto);
+    update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto, @Request() req) {
+        return this.usersService.update(+id, updateUserDto, req.user.companyId);
     }
 
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.usersService.remove(+id);
+    remove(@Param('id') id: string, @Request() req) {
+        return this.usersService.remove(+id, req.user.companyId);
     }
 }

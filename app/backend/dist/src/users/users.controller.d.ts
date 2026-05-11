@@ -6,6 +6,6 @@ export declare class UsersController {
     findAll(req: any): Promise<import("./user.entity").User[]>;
     findOne(id: string, req: any): Promise<import("./user.entity").User | null>;
     create(createUserDto: CreateUserDto, req: any): Promise<import("./user.entity").User>;
-    update(id: string, updateUserDto: UpdateUserDto): Promise<import("./user.entity").User | null>;
-    remove(id: string): Promise<void>;
+    update(id: string, updateUserDto: UpdateUserDto, req: any): Promise<import("./user.entity").User | null>;
+    remove(id: string, req: any): Promise<void>;
 }

@@ -97,12 +97,22 @@ let UsersService = class UsersService {
         });
         return this.usersRepository.save(user);
     }
-    async update(id, updateUserDto) {
-        await this.usersRepository.update(id, updateUserDto);
-        return this.findOne(id);
+    async update(id, updateUserDto, companyId) {
+        const user = await this.findOneFiltered(id, companyId);
+        if (!user)
+            return null;
+        const data = { ...updateUserDto };
+        if (data.pin) {
+            data.pin = await bcrypt.hash(data.pin, 10);
+        }
+        await this.usersRepository.update(id, data);
+        return this.findOneFiltered(id, companyId);
     }
-    async remove(id) {
-        await this.usersRepository.delete(id);
+    async remove(id, companyId) {
+        const user = await this.findOneFiltered(id, companyId);
+        if (user) {
+            await this.usersRepository.delete(id);
+        }
     }
 };
 exports.UsersService = UsersService;

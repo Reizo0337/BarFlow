@@ -9,14 +9,14 @@
         class="md:hidden fixed inset-0 bg-black/50 z-[55] backdrop-blur-sm transition-all"
       ></div>
 
-      <Sidebar v-if="!uiStore.isZenMode" />
+      <Sidebar v-if="!uiStore.isZenMode && !uiStore.isSidebarHidden" />
       <div class="flex flex-col flex-1 overflow-hidden">
-        <Header v-if="!uiStore.isZenMode" />
+        <Header v-if="!uiStore.isZenMode && !uiStore.isSidebarHidden" />
         <main 
           class="flex-1 overflow-auto bg-background transition-colors duration-300"
           :class="[
             uiStore.isMaximized ? 'p-3 md:p-6' : 'p-4 md:p-16',
-            uiStore.isZenMode ? '!p-0' : '',
+            (uiStore.isZenMode || uiStore.isSidebarHidden) ? '!p-0' : '',
             'max-w-full'
           ]"
         >

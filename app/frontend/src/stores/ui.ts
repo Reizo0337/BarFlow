@@ -22,9 +22,14 @@ export const useUIStore = defineStore('ui', () => {
     })
 
     const isZenMode = ref(false)
+    const isSidebarHidden = ref(false)
 
     const toggleSidebar = () => {
         isSidebarCollapsed.value = !isSidebarCollapsed.value
+    }
+
+    const toggleSidebarHidden = (value?: boolean) => {
+        isSidebarHidden.value = typeof value === 'boolean' ? value : !isSidebarHidden.value
     }
 
     const toggleZenMode = async (value?: boolean) => {
@@ -59,8 +64,10 @@ export const useUIStore = defineStore('ui', () => {
         isSidebarCollapsed,
         isMobileSidebarOpen,
         isZenMode,
+        isSidebarHidden,
         toggleSidebar,
         toggleMobileSidebar,
-        toggleZenMode
+        toggleZenMode,
+        toggleSidebarHidden
     }
 })
