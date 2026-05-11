@@ -20,24 +20,6 @@ const handleLogout = () => {
   router.push('/portal')
 }
 
-const minimize = () => {
-  if (window.ipcRenderer) {
-    window.ipcRenderer.minimize()
-  }
-}
-
-const toggleMaximize = () => {
-  if (window.ipcRenderer) {
-    window.ipcRenderer.maximize()
-  }
-}
-
-const close = () => {
-  if (window.ipcRenderer) {
-    window.ipcRenderer.close()
-  }
-}
-
 const selectEmployee = (id: number) => {
   authStore.switchUser(id)
   isUserMenuOpen.value = false
@@ -135,32 +117,6 @@ declare global {
         <Moon v-else class="w-5 h-5 text-indigo-600" />
       </button>
 
-      <!-- Window Controls -->
-      <div class="flex">
-        <button 
-          @click="minimize" 
-          class="flex items-center justify-center w-12 hover:bg-primary/10 transition-colors"
-          title="Minimizar"
-        >
-          <Minus class="w-4 h-4" />
-        </button>
-
-        <button 
-          @click="toggleMaximize" 
-          class="flex items-center justify-center w-12 hover:bg-primary/10 transition-colors"
-          title="Maximizar"
-        >
-          <component :is="uiStore.isMaximized ? Copy : Square" class="w-3.5 h-3.5" />
-        </button>
-
-        <button 
-          @click="close" 
-          class="flex items-center justify-center w-12 hover:bg-red-500 hover:text-white transition-colors"
-          title="Cerrar"
-        >
-          <X class="w-4 h-4" />
-        </button>
-      </div>
     </div>
   </div>
 </template>

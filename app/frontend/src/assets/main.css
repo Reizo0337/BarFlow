@@ -8,6 +8,10 @@
     --color-card: var(--card);
     --color-card-foreground: var(--card-foreground);
     --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
 }
 
 :root {
@@ -18,7 +22,10 @@
     --card: #ffffff;
     --card-foreground: #0f172a;
     --border: #e2e8f0;
-
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --accent: #f1f5f9;
+    --accent-foreground: #0f172a;
 
     /* Touch sizes */
     --touch-target: 48px;
@@ -33,6 +40,10 @@
     --card: #1e293b;
     --card-foreground: #f8fafc;
     --border: #334155;
+    --destructive: #f87171;
+    --destructive-foreground: #ffffff;
+    --accent: #1e293b;
+    --accent-foreground: #f8fafc;
 }
 
 html,

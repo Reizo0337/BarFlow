@@ -3,8 +3,10 @@ import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Home, Receipt, Settings, BarChart3, ChevronLeft, ChevronRight, Menu, ShieldCheck, Box, FileText, PieChart } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
+import { useShiftsStore } from '@/stores/shifts'
 
 const uiStore = useUIStore()
+const shiftsStore = useShiftsStore()
 const isHovered = ref(false)
 
 const isExpanded = computed(() => !uiStore.isSidebarCollapsed)
@@ -67,12 +69,15 @@ const isExpanded = computed(() => !uiStore.isSidebarCollapsed)
                 <ul class="space-y-1">
                     <li v-for="link in [
                         { to: '/app/dashboard', icon: Home, label: 'Inicio' },
-                        { to: '/app/ventas', icon: Receipt, label: 'Ventas' }
+                        { to: '/app/ventas', icon: Receipt, label: 'Ventas', requiresShift: true }
                     ]" :key="link.to">
                         <RouterLink 
                             :to="link.to" 
                             class="flex items-center text-foreground/70 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group overflow-hidden h-12" 
-                            :class="isExpanded ? 'gap-4 px-4' : 'justify-center w-10 mx-auto'"
+                            :class="[
+                                isExpanded ? 'gap-4 px-4' : 'justify-center w-10 mx-auto',
+                                link.requiresShift && !shiftsStore.currentShift ? 'opacity-30 grayscale pointer-events-none' : ''
+                            ]"
                             active-class="!bg-primary !text-white shadow-lg shadow-primary/20"
                             @click="uiStore.toggleMobileSidebar(false)"
                         >

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useShiftsStore } from '@/stores/shifts'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -96,6 +97,18 @@ router.beforeEach(async (to) => {
   
   if (to.path === '/portal' && isAuthenticated) {
     return '/app/dashboard'
+  }
+
+  if (to.name === 'ventas') {
+    const shiftsStore = useShiftsStore()
+    // Try to fetch current shift if not present
+    if (!shiftsStore.currentShift) {
+      await shiftsStore.fetchCurrentShift()
+    }
+    
+    if (!shiftsStore.currentShift) {
+      return '/app/dashboard'
+    }
   }
   
   return true

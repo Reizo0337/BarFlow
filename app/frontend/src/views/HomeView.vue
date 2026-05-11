@@ -32,19 +32,24 @@ let timer: any = null
 
 const hoursWorked = computed(() => {
     // totalMs is past shifts today in ms
-    let totalMs = shiftsStore.dailyHours;
+    let totalMs = Math.max(0, shiftsStore.dailyHours);
     
     // If there is an active shift, add its current duration
     if (shiftsStore.currentShift) {
         const start = new Date(shiftsStore.currentShift.startTime)
-        totalMs += now.value.getTime() - start.getTime()
+        const duration = now.value.getTime() - start.getTime()
+        totalMs += Math.max(0, duration)
     }
 
     const hours = Math.floor(totalMs / (1000 * 60 * 60))
     const minutes = Math.floor((totalMs % (1000 * 60 * 60)) / (1000 * 60))
     const seconds = Math.floor((totalMs % (1000 * 60)) / 1000)
     
-    return `${hours}h ${minutes}m ${seconds}s`
+    const hh = hours.toString().padStart(2, '0')
+    const mm = minutes.toString().padStart(2, '0')
+    const ss = seconds.toString().padStart(2, '0')
+    
+    return `${hh}:${mm}:${ss}`
 })
 
 const handleLogout = () => {
@@ -81,21 +86,18 @@ const stopShift = async () => { await shiftsStore.endShift() }
                 </div>
                 
                 <!-- Main Action Button (TOUCH-FIRST - LARGE BUTTON) -->
-                <div class="relative group w-full md:w-fit">
+                <div class="w-full md:w-fit">
                     <RouterLink 
                         to="/app/ventas" 
                         class="flex items-center justify-between w-full md:w-fit gap-6 pl-8 pr-6 py-5 bg-primary text-white rounded-[2rem] font-black text-xl hover:scale-[1.02] transition-all shadow-2xl shadow-primary/30 active:scale-95 group overflow-hidden relative"
-                        :class="{ 'opacity-50 grayscale pointer-events-none': !shiftsStore.currentShift }"
+                        :class="{ 'opacity-50 grayscale cursor-not-allowed pointer-events-none': !shiftsStore.currentShift }"
                     >
                         <div class="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                        <span class="relative z-10">Portal de Ventas</span>
+                        <span class="relative z-10">{{ shiftsStore.currentShift ? 'Portal de Ventas' : 'Portal de Ventas (Inicia Jornada)' }}</span>
                         <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center relative z-10">
                             <ChevronRight class="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                         </div>
                     </RouterLink>
-                    <div v-if="!shiftsStore.currentShift" class="absolute -top-10 left-0 bg-destructive text-white text-[10px] font-black px-3 py-1 rounded-full animate-bounce">
-                        DEBES INICIAR JORNADA PRIMERO
-                    </div>
                 </div>
             </div>
 
