@@ -3,7 +3,7 @@ import { CreateProductDto, UpdateProductDto } from './product.dto';
 export declare class InventoryController {
     private readonly inventoryService;
     constructor(inventoryService: InventoryService);
-    uploadFile(file: Express.Multer.File): {
+    uploadFile(file: any): {
         url: string;
     };
     findAll(req: any): Promise<import("./product.entity").Product[]>;

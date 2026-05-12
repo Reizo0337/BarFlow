@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { InventoryService } from '../inventory/inventory.service';
+import { SmartImageService } from './smart-image.service';
 
 @Injectable()
 export class AiService {
@@ -9,7 +10,8 @@ export class AiService {
     private readonly apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
 
     constructor(
-        private readonly inventoryService: InventoryService
+        private readonly inventoryService: InventoryService,
+        private readonly smartImageService: SmartImageService
     ) { }
 
     async processCommand(text: string, companyId: number, history: any[] = []) {
@@ -28,10 +30,10 @@ TAREAS:
 3. Devolver SIEMPRE un objeto JSON estructurado con un array "actions".
 
 TOOLS:
-1. create_product: { name, stock, price, categoryName, image } -> Crea un producto. 'image' debe ser una URL de imagen representativa si es posible.
-2. update_product: { product (name), newName, price, categoryName, image } -> Modifica CUALQUIER propiedad de un producto (nombre, precio, categoría o imagen).
+1. create_product: { name, stock, price, categoryName } -> Crea un producto. El usuario subirá la foto después.
+2. update_product: { product (name), newName, price, categoryName } -> Modifica CUALQUIER propiedad.
 3. update_stock: { product (name), quantity (number), operation ("add" | "remove" | "set") } -> Gestiona entradas/salidas de stock.
-4. update_price: { product (name), price (number), image } -> Actualiza el precio o la imagen.
+4. update_price: { product (name), price (number) } -> Actualiza el precio.
 5. delete_product: { product (name) } -> REQUIERE CONFIRMACIÓN.
 6. create_category: { name } -> Crea una categoría oficial.
 7. update_category: { oldName, newName } -> Renombra una categoría.
@@ -44,6 +46,8 @@ TOOLS:
 
 REGLAS CRÍTICAS:
 - Responde ÚNICAMENTE en formato JSON. No añadas texto fuera del JSON.
+- No uses términos técnicos como "intent", "request_confirmation" o prefijos como "Error:" en los campos "message" dirigidos al usuario.
+- ANTES de ejecutar 'create_product', usa SIEMPRE 'request_confirmation' para que el usuario valide los datos y pueda subir su propia foto.
 - Si la orden es ambigua, usa 'chat_response' para preguntar.
 - Antes de 'delete_product', 'delete_category' o 'bulk_update_products', usa 'request_confirmation'.
 - Si el usuario confirma una acción previa (ej: "Sí", "Hazlo"), ejecuta la acción real guardada en el historial.
@@ -51,7 +55,7 @@ REGLAS CRÍTICAS:
 EJEMPLO DE SALIDA:
 {
   "actions": [
-    { "intent": "update_product", "data": { "product": "Hamburguesa", "newName": "Hamburguesa Completa" }, "message": "Cambiando el nombre de Hamburguesa a Hamburguesa Completa." }
+    { "intent": "request_confirmation", "data": { "intent": "create_product", "name": "Mojito", "price": 8, "stock": 10 }, "message": "He preparado los detalles para el Mojito. ¿Son correctos? Puedes subir la foto ahora." }
   ]
 }
 `;
@@ -64,7 +68,7 @@ EJEMPLO DE SALIDA:
 
         try {
             const response = await axios.post(this.apiUrl, {
-                model: 'google/gemini-2.0-flash-001',
+                model: 'openai/gpt-4o-mini',
                 messages,
                 response_format: { type: 'json_object' }
             }, {
@@ -106,6 +110,24 @@ EJEMPLO DE SALIDA:
                 case 'create_product':
                     const newProd = await this.inventoryService.create(data, companyId);
                     return { ...action, status: 'success', result: newProd };
+
+                case 'request_confirmation':
+                    // Smart Suggestion: If creating a product, look for an existing image match globally
+                    const confData = action.data || action;
+                    if (confData.intent === 'create_product' || action.intent === 'create_product') {
+                        const productName = confData.name || action.name;
+                        if (productName) {
+                            const existing = await this.inventoryService.findGlobalByName(productName);
+                            if (existing && existing.image) {
+                                // Add the found image to the data so it's pre-filled in the frontend card
+                                if (action.data) action.data.image = existing.image;
+                                else action.image = existing.image;
+                                
+                                action.message = `He preparado "${productName}". He encontrado una imagen sugerida en el sistema. ¿Es correcta?`;
+                            }
+                        }
+                    }
+                    return { ...action, status: 'pending_confirmation' };
 
                 case 'update_product':
                     const pToUpdate = await this.inventoryService.findByName(data.product, companyId);
@@ -166,9 +188,6 @@ EJEMPLO DE SALIDA:
 
                     await this.inventoryService.removeCategory(catToDelete.id, companyId);
                     return { ...action, status: 'success', message: `Categoría "${data.name}" eliminada.` };
-
-                case 'request_confirmation':
-                    return { ...action, status: 'pending_confirmation' };
 
                 case 'bulk_update_products':
                     const updatedCount = await this.inventoryService.bulkUpdate(companyId, data);

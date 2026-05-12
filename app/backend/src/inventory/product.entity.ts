@@ -31,7 +31,7 @@ export class Product {
     @Column({ default: 'unid' })
     unit: string;
 
-    @Column({ nullable: true })
+    @Column({ type: 'text', nullable: true })
     image: string;
 
     @Index()

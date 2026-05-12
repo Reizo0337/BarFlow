@@ -12,13 +12,14 @@ const ai_service_1 = require("./ai.service");
 const ai_controller_1 = require("./ai.controller");
 const inventory_module_1 = require("../inventory/inventory.module");
 const companies_module_1 = require("../companies/companies.module");
+const smart_image_service_1 = require("./smart-image.service");
 let AiModule = class AiModule {
 };
 exports.AiModule = AiModule;
 exports.AiModule = AiModule = __decorate([
     (0, common_1.Module)({
         imports: [inventory_module_1.InventoryModule, companies_module_1.CompaniesModule],
-        providers: [ai_service_1.AiService],
+        providers: [ai_service_1.AiService, smart_image_service_1.SmartImageService],
         controllers: [ai_controller_1.AiController],
     })
 ], AiModule);

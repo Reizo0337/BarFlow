@@ -11,6 +11,4 @@ export declare class SeedService implements OnApplicationBootstrap {
     constructor(usersService: UsersService, inventoryService: InventoryService, invoicesService: InvoicesService, companiesService: CompaniesService);
     onApplicationBootstrap(): Promise<void>;
     private seedUsers;
-    private seedInventory;
-    private seedInvoices;
 }

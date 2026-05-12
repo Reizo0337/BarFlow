@@ -39,48 +39,11 @@ let SeedService = class SeedService {
             if (users.length === 0) {
                 await this.seedUsers(companyA);
             }
-            const products = await this.inventoryService.findAll(companyA.id);
-            if (products.length < 4) {
-                await this.seedInventory(companyA);
-            }
-            const invoices = await this.invoicesService.findAll(companyA.id);
-            if (invoices.length < 2) {
-                await this.seedInvoices(companyA);
-            }
         }
     }
     async seedUsers(companyA) {
         console.log('Seeding users for company...');
         await this.usersService.create({ name: 'Admin Central', role: 'Administrador', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin1', pin: '1111' }, companyA.id);
-    }
-    async seedInventory(companyA) {
-        console.log('Seeding inventory for company...');
-        const productsA = [
-            { name: 'Cerveza Artesana', category: 'drinks', stock: 100, unit: 'unid', minStock: 20, price: 4.5, image: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=300&h=300&fit=crop' },
-            { name: 'Café Con Leche', category: 'coffee', stock: 50, unit: 'unid', minStock: 10, price: 2.2, image: 'https://images.unsplash.com/photo-1541167760496-162955ed8a9f?w=300&h=300&fit=crop' },
-            { name: 'Hamburguesa BarFlow', category: 'food', stock: 30, unit: 'unid', minStock: 5, price: 12.5, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&h=300&fit=crop' },
-            { name: 'Coca Cola', category: 'drinks', stock: 100, unit: 'unid', minStock: 20, price: 2.5, image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=300&h=300&fit=crop' },
-        ];
-        for (const p of productsA) {
-            await this.inventoryService.create(p, companyA.id);
-        }
-    }
-    async seedInvoices(companyA) {
-        console.log('Seeding invoices for company...');
-        await this.invoicesService.create({
-            invoiceNumber: 'BC-001',
-            type: 'out',
-            clientName: 'Consumidor Final',
-            amount: 45.5,
-            status: 'paid'
-        }, companyA.id);
-        await this.invoicesService.create({
-            invoiceNumber: 'BC-002',
-            type: 'in',
-            clientName: 'Proveedor Bebidas',
-            amount: 150.0,
-            status: 'paid'
-        }, companyA.id);
     }
 };
 exports.SeedService = SeedService;

@@ -7,8 +7,8 @@ const swagger_1 = require("@nestjs/swagger");
 const path_1 = require("path");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
-    app.useStaticAssets((0, path_1.join)(__dirname, '..', 'uploads'), {
-        prefix: '/uploads/',
+    app.useStaticAssets((0, path_1.join)(process.cwd(), 'uploads'), {
+        prefix: '/uploads',
     });
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,

@@ -52,9 +52,15 @@ export const useInventoryStore = defineStore('inventory', () => {
     const addProduct = async (data: any) => {
         try {
             await api.post('/inventory', data)
-            await fetchProducts()
+            // Separate refresh so creation failure is isolated
+            try {
+                await fetchProducts()
+            } catch (e) {
+                console.warn('Product created but refresh failed:', e)
+            }
         } catch (error) {
             console.error('Error adding product:', error)
+            throw error
         }
     }
 
@@ -64,6 +70,7 @@ export const useInventoryStore = defineStore('inventory', () => {
             await fetchProducts()
         } catch (error) {
             console.error('Error updating product:', error)
+            throw error
         }
     }
 
@@ -91,6 +98,12 @@ export const useInventoryStore = defineStore('inventory', () => {
             throw error
         }
     }
+    const resolveImageUrl = (url?: string) => {
+        if (!url) return ''
+        if (url.startsWith('http')) return url
+        const baseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:3000'
+        return `${baseUrl}${url}`
+    }
 
     return {
         products,
@@ -101,6 +114,7 @@ export const useInventoryStore = defineStore('inventory', () => {
         addProduct,
         updateProduct,
         addCategory,
-        uploadImage
+        uploadImage,
+        resolveImageUrl
     }
 })

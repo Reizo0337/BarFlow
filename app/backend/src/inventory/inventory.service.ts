@@ -4,15 +4,55 @@ import { Repository } from 'typeorm';
 import { Product } from './product.entity';
 import { Category } from './category.entity';
 import { CreateProductDto, UpdateProductDto } from './product.dto';
+import axios from 'axios';
+import * as fs from 'fs';
+import * as path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class InventoryService {
+    private readonly uploadDir = './uploads/products';
+
     constructor(
         @InjectRepository(Product)
         private productRepository: Repository<Product>,
         @InjectRepository(Category)
         private categoryRepository: Repository<Category>,
-    ) { }
+    ) {
+        if (!fs.existsSync(this.uploadDir)) {
+            fs.mkdirSync(this.uploadDir, { recursive: true });
+        }
+    }
+
+    private async downloadAndSaveImage(url: string): Promise<string> {
+        if (!url || !url.startsWith('http')) return url;
+
+        try {
+            const response = await axios({
+                url,
+                method: 'GET',
+                responseType: 'stream',
+                timeout: 5000
+            });
+
+            const fileName = `${uuidv4()}.jpg`;
+            const filePath = path.join(this.uploadDir, fileName);
+            const writer = fs.createWriteStream(filePath);
+
+            response.data.pipe(writer);
+
+            return new Promise((resolve, reject) => {
+                writer.on('finish', () => resolve(`/uploads/products/${fileName}`));
+                writer.on('error', (err) => {
+                    console.error('Writer error:', err.message);
+                    resolve(url); // Fallback to original URL on write error
+                });
+            });
+        } catch (error) {
+            console.error('Error downloading image:', error.message);
+            return url;
+        }
+    }
 
     findAll(companyId: number): Promise<Product[]> {
         return this.productRepository.find({
@@ -59,19 +99,28 @@ export class InventoryService {
     }
 
     async create(createProductDto: any, companyId: number): Promise<Product> {
-        // Resolve category if it's a string (AI might send name) or ID
+        // Resolve category if it's a string (AI or direct send might send name) or ID
         let categoryId = createProductDto.categoryId;
+        const catName = createProductDto.categoryName || (typeof createProductDto.category === 'string' ? createProductDto.category : null);
 
-        if (createProductDto.categoryName) {
-            let category = await this.findCategoryByName(createProductDto.categoryName, companyId);
+        if (catName) {
+            let category = await this.findCategoryByName(catName, companyId);
             if (!category) {
-                category = await this.createCategory(createProductDto.categoryName, companyId);
+                category = await this.createCategory(catName, companyId);
             }
             categoryId = category.id;
         }
 
+        // Remove the category string/name from the spread to avoid TypeORM relation errors
+        const { category, categoryName, ...rest } = createProductDto;
+
+        // If image is a remote URL (from AI), download it to make it "sticky"
+        if (rest.image && rest.image.startsWith('http')) {
+            rest.image = await this.downloadAndSaveImage(rest.image);
+        }
+
         return this.productRepository.save({
-            ...createProductDto,
+            ...rest,
             category: categoryId ? { id: categoryId } : null,
             company: { id: companyId } as any
         });
@@ -93,13 +142,18 @@ export class InventoryService {
             delete updateProductDto.categoryName;
         }
 
+        // If image is a remote URL (from AI), download it
+        if (updateProductDto.image && updateProductDto.image.startsWith('http')) {
+            updateProductDto.image = await this.downloadAndSaveImage(updateProductDto.image);
+        }
+
         await this.productRepository.update(id, updateProductDto);
         return this.findOne(id, companyId);
     }
 
     async bulkUpdate(companyId: number, data: { categoryName?: string, priceAdjustment?: number, stockAdjustment?: number }): Promise<number> {
         let products = await this.findAll(companyId);
-        
+
         if (data.categoryName) {
             products = products.filter(p => p.category?.name.toLowerCase() === data.categoryName?.toLowerCase());
         }
@@ -107,7 +161,7 @@ export class InventoryService {
         let updatedCount = 0;
         for (const product of products) {
             const updates: any = {};
-            
+
             if (data.priceAdjustment) {
                 // Adjustment is a percentage, e.g., 15 for +15%, -10 for -10%
                 const factor = 1 + (data.priceAdjustment / 100);
@@ -148,5 +202,13 @@ export class InventoryService {
 
         product.stock = Math.max(0, product.stock + delta);
         return this.productRepository.save(product);
+    }
+
+    async findGlobalByName(name: string): Promise<Product | null> {
+        return this.productRepository.createQueryBuilder('product')
+            .where('LOWER(product.name) = LOWER(:name)', { name })
+            .andWhere('product.image IS NOT NULL')
+            .andWhere('product.image != ""')
+            .getOne();
     }
 }

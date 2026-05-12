@@ -36,7 +36,7 @@ export class InventoryController {
             },
         },
     })
-    uploadFile(@UploadedFile() file: Express.Multer.File) {
+    uploadFile(@UploadedFile() file: any) {
         return {
             url: `/uploads/products/${file.filename}`
         };
