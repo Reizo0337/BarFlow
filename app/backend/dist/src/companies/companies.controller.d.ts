@@ -1,8 +1,7 @@
-import { Repository } from 'typeorm';
-import { Company } from './company.entity';
+import { CompaniesService } from './companies.service';
 export declare class CompaniesController {
-    private companyRepository;
-    constructor(companyRepository: Repository<Company>);
+    private readonly companiesService;
+    constructor(companiesService: CompaniesService);
     getSettings(req: any): Promise<{
         currency: string;
         legalName: string;

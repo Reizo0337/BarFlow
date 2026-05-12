@@ -11,6 +11,7 @@ import { CompaniesModule } from './companies/companies.module';
 import { AuthModule } from './auth/auth.module';
 import { ShiftsModule } from './shifts/shifts.module';
 import { TablesModule } from './tables/tables.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { TablesModule } from './tables/tables.module';
     CompaniesModule,
     ShiftsModule,
     TablesModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService],

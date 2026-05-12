@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Product = void 0;
 const typeorm_1 = require("typeorm");
 const company_entity_1 = require("../companies/company.entity");
+const category_entity_1 = require("./category.entity");
 const numeric_transformer_1 = require("../common/numeric-transformer");
 let Product = class Product {
     id;
@@ -34,8 +35,9 @@ __decorate([
     __metadata("design:type", String)
 ], Product.prototype, "name", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
-    __metadata("design:type", String)
+    (0, typeorm_1.ManyToOne)(() => category_entity_1.Category, (category) => category.products, { nullable: true, onDelete: 'SET NULL' }),
+    (0, typeorm_1.JoinColumn)({ name: 'categoryId' }),
+    __metadata("design:type", category_entity_1.Category)
 ], Product.prototype, "category", void 0);
 __decorate([
     (0, typeorm_1.Column)('decimal', {

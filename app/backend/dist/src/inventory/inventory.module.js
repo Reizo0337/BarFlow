@@ -10,6 +10,7 @@ exports.InventoryModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const product_entity_1 = require("./product.entity");
+const category_entity_1 = require("./category.entity");
 const inventory_service_1 = require("./inventory.service");
 const inventory_controller_1 = require("./inventory.controller");
 let InventoryModule = class InventoryModule {
@@ -17,10 +18,10 @@ let InventoryModule = class InventoryModule {
 exports.InventoryModule = InventoryModule;
 exports.InventoryModule = InventoryModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([product_entity_1.Product])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([product_entity_1.Product, category_entity_1.Category])],
         providers: [inventory_service_1.InventoryService],
         controllers: [inventory_controller_1.InventoryController],
-        exports: [inventory_service_1.InventoryService],
+        exports: [inventory_service_1.InventoryService, typeorm_1.TypeOrmModule],
     })
 ], InventoryModule);
 //# sourceMappingURL=inventory.module.js.map

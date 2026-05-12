@@ -22,4 +22,8 @@ export class CompaniesService {
         const company = this.companyRepository.create(data);
         return this.companyRepository.save(company);
     }
+
+    async findById(id: number): Promise<Company | null> {
+        return this.companyRepository.findOne({ where: { id } });
+    }
 }

@@ -1,6 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, Index } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Company } from '../companies/company.entity';
-
+import { Category } from './category.entity';
 import { ColumnNumericTransformer } from '../common/numeric-transformer';
 
 @Entity()
@@ -11,8 +11,9 @@ export class Product {
     @Column()
     name: string;
 
-    @Column()
-    category: string;
+    @ManyToOne(() => Category, (category) => category.products, { nullable: true, onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'categoryId' })
+    category: Category;
 
     @Column('decimal', { 
         precision: 10, 

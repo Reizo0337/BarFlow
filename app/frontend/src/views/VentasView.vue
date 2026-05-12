@@ -56,7 +56,7 @@ const hoursWorked = computed(() => {
     return `${h}:${m}:${s}`
 })
 
-const selectedCategory = ref('all')
+const selectedCategory = ref<string | number>('all')
 const cart = ref<any[]>([])
 const activeTab = ref<'products' | 'cart'>('products')
 const isProcessing = ref(false)
@@ -65,7 +65,7 @@ const isProcessing = ref(false)
 const dynamicCategories = computed(() => {
     const base = [{ id: 'all', name: 'Todo' }]
     const fromBackend = inventoryStore.categories.map(cat => {
-        return { id: cat, name: cat }
+        return { id: cat.id, name: cat.name }
     })
     return [...base, ...fromBackend]
 })
@@ -308,9 +308,6 @@ onMounted(async () => {
     if (tablesStore.pendingOrders[selectedTable.value]) {
         cart.value = [...tablesStore.pendingOrders[selectedTable.value]]
     }
-
-    // Auto-activate Zen Mode when entering sales terminal
-    uiStore.toggleZenMode(true)
 })
 
 onUnmounted(() => {
@@ -321,7 +318,7 @@ onUnmounted(() => {
 const filteredProducts = computed(() => {
     let result = inventoryStore.products
     if (selectedCategory.value !== 'all') {
-        result = result.filter(p => p.category.toLowerCase() === selectedCategory.value.toLowerCase())
+        result = result.filter(p => p.category?.id === selectedCategory.value)
     }
     return result
 })

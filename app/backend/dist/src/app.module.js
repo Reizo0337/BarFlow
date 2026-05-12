@@ -20,6 +20,7 @@ const companies_module_1 = require("./companies/companies.module");
 const auth_module_1 = require("./auth/auth.module");
 const shifts_module_1 = require("./shifts/shifts.module");
 const tables_module_1 = require("./tables/tables.module");
+const ai_module_1 = require("./ai/ai.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -50,6 +51,7 @@ exports.AppModule = AppModule = __decorate([
             companies_module_1.CompaniesModule,
             shifts_module_1.ShiftsModule,
             tables_module_1.TablesModule,
+            ai_module_1.AiModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService, seed_service_1.SeedService],

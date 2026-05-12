@@ -1,23 +1,18 @@
-import { Controller, Get, Patch, Body, Request, UseGuards, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Company } from './company.entity';
+import { Controller, Get, Patch, Post, Body, Request, UseGuards, NotFoundException } from '@nestjs/common';
+import { CompaniesService } from './companies.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('companies')
 @UseGuards(JwtAuthGuard)
 export class CompaniesController {
     constructor(
-        @InjectRepository(Company)
-        private companyRepository: Repository<Company>,
-    ) {}
+        private readonly companiesService: CompaniesService,
+    ) { }
 
     @Get('settings')
     async getSettings(@Request() req) {
-        const company = await this.companyRepository.findOne({
-            where: { id: req.user.companyId }
-        });
-        
+        const company = await this.companiesService.findById(req.user.companyId);
+
         if (!company) {
             throw new NotFoundException('Company settings not found');
         }
@@ -35,7 +30,7 @@ export class CompaniesController {
 
     @Patch('settings')
     async updateSettings(@Body() body: any, @Request() req) {
-        await this.companyRepository.update(req.user.companyId, body);
+        await this.companiesService.create({ id: req.user.companyId, ...body });
         return { success: true };
     }
 }

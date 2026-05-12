@@ -23,6 +23,7 @@ export const useUIStore = defineStore('ui', () => {
 
     const isZenMode = ref(false)
     const isSidebarHidden = ref(false)
+    const isInventoryMode = ref(false)
 
     const toggleSidebar = () => {
         isSidebarCollapsed.value = !isSidebarCollapsed.value
@@ -30,6 +31,10 @@ export const useUIStore = defineStore('ui', () => {
 
     const toggleSidebarHidden = (value?: boolean) => {
         isSidebarHidden.value = typeof value === 'boolean' ? value : !isSidebarHidden.value
+    }
+
+    const toggleInventoryMode = (value?: boolean) => {
+        isInventoryMode.value = typeof value === 'boolean' ? value : !isInventoryMode.value
     }
 
     const toggleZenMode = async (value?: boolean) => {
@@ -68,6 +73,8 @@ export const useUIStore = defineStore('ui', () => {
         toggleSidebar,
         toggleMobileSidebar,
         toggleZenMode,
-        toggleSidebarHidden
+        toggleSidebarHidden,
+        isInventoryMode,
+        toggleInventoryMode
     }
 })

@@ -32,6 +32,9 @@ let CompaniesService = class CompaniesService {
         const company = this.companyRepository.create(data);
         return this.companyRepository.save(company);
     }
+    async findById(id) {
+        return this.companyRepository.findOne({ where: { id } });
+    }
 };
 exports.CompaniesService = CompaniesService;
 exports.CompaniesService = CompaniesService = __decorate([

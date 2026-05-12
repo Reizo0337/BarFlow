@@ -39,6 +39,7 @@ import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import Header from './components/layout/Header.vue'
 import Sidebar from './components/layout/Sidebar.vue'
+import InventorySidebar from './components/layout/InventorySidebar.vue'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 

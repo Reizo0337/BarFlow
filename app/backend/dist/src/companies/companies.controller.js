@@ -14,19 +14,15 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CompaniesController = void 0;
 const common_1 = require("@nestjs/common");
-const typeorm_1 = require("@nestjs/typeorm");
-const typeorm_2 = require("typeorm");
-const company_entity_1 = require("./company.entity");
+const companies_service_1 = require("./companies.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let CompaniesController = class CompaniesController {
-    companyRepository;
-    constructor(companyRepository) {
-        this.companyRepository = companyRepository;
+    companiesService;
+    constructor(companiesService) {
+        this.companiesService = companiesService;
     }
     async getSettings(req) {
-        const company = await this.companyRepository.findOne({
-            where: { id: req.user.companyId }
-        });
+        const company = await this.companiesService.findById(req.user.companyId);
         if (!company) {
             throw new common_1.NotFoundException('Company settings not found');
         }
@@ -41,7 +37,7 @@ let CompaniesController = class CompaniesController {
         };
     }
     async updateSettings(body, req) {
-        await this.companyRepository.update(req.user.companyId, body);
+        await this.companiesService.create({ id: req.user.companyId, ...body });
         return { success: true };
     }
 };
@@ -64,7 +60,6 @@ __decorate([
 exports.CompaniesController = CompaniesController = __decorate([
     (0, common_1.Controller)('companies'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __param(0, (0, typeorm_1.InjectRepository)(company_entity_1.Company)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __metadata("design:paramtypes", [companies_service_1.CompaniesService])
 ], CompaniesController);
 //# sourceMappingURL=companies.controller.js.map

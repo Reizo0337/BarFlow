@@ -6,4 +6,5 @@ export declare class CompaniesService {
     findAll(): Promise<Company[]>;
     findByCode(companyCode: string): Promise<Company | null>;
     create(data: Partial<Company>): Promise<Company>;
+    findById(id: number): Promise<Company | null>;
 }
