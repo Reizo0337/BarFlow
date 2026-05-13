@@ -122,7 +122,7 @@ EJEMPLO DE SALIDA:
                                 // Add the found image to the data so it's pre-filled in the frontend card
                                 if (action.data) action.data.image = existing.image;
                                 else action.image = existing.image;
-                                
+
                                 action.message = `He preparado "${productName}". He encontrado una imagen sugerida en el sistema. ¿Es correcta?`;
                             }
                         }

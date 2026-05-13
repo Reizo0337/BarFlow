@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Wine, Building2, KeyRound, ArrowRight, Loader2, Lock } from 'lucide-vue-next'
+import { Wine, Building2, KeyRound, ArrowRight, Loader2, Lock, Sparkles, ChevronRight, Github, Sun, Moon } from 'lucide-vue-next'
 
 import { useAuthStore } from '@/stores/auth'
 
@@ -12,6 +12,7 @@ const companyCode = ref('')
 const pin = ref('')
 const isLoading = ref(false)
 const error = ref('')
+const isDark = ref(true)
 
 const isFixedCompany = computed(() => !!route.params.code)
 
@@ -19,10 +20,19 @@ onMounted(() => {
     if (route.params.code) {
         companyCode.value = route.params.code as string
     }
+    isDark.value = document.documentElement.classList.contains('dark')
 })
 
+const toggleTheme = () => {
+    isDark.value = !isDark.value
+    document.documentElement.classList.toggle('dark', isDark.value)
+}
+
 const handleLogin = async () => {
-    if (!companyCode.value || !pin.value) {
+    const code = companyCode.value?.trim()
+    const p = pin.value?.trim()
+
+    if (!code || !p) {
         error.value = 'Por favor, rellena todos los campos'
         return
     }
@@ -31,7 +41,7 @@ const handleLogin = async () => {
     error.value = ''
     
     try {
-        const success = await authStore.loginSaaS(companyCode.value, pin.value)
+        const success = await authStore.loginSaaS(code, p)
         if (success) {
             router.push('/app/dashboard')
         } else {
@@ -46,106 +56,168 @@ const handleLogin = async () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-[#050505] flex items-center justify-center p-6 selection:bg-primary selection:text-white">
-        <!-- Abstract Background -->
-        <div class="absolute inset-0 overflow-hidden -z-10">
-            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 blur-[150px] rounded-full"></div>
+    <div class="min-h-screen bg-background text-foreground flex items-center justify-center p-0 selection:bg-primary selection:text-white transition-colors duration-500 overflow-hidden font-sans uppercase tracking-tight">
+        
+        <!-- BACKGROUND DECO -->
+        <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+            <div class="absolute top-0 right-0 w-[800px] h-[800px] bg-primary/10 blur-[150px] rounded-full -translate-y-1/2 translate-x-1/2 animate-pulse-slow"></div>
+            <div class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-primary/5 blur-[120px] rounded-full translate-y-1/2 -translate-x-1/2"></div>
+            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03] dark:opacity-[0.05]"></div>
         </div>
 
-        <div class="w-full max-w-md space-y-12 animate-in fade-in zoom-in duration-700">
-            <!-- Logo -->
-            <div class="text-center space-y-4">
-                <div class="w-20 h-20 bg-primary/10 border border-primary/20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-primary/20 group">
-                    <Wine v-if="!isFixedCompany" class="w-10 h-10 text-primary group-hover:scale-110 transition-transform" />
-                    <Lock v-else class="w-10 h-10 text-primary group-hover:scale-110 transition-transform" />
+        <!-- THEME TOGGLE & BACK (Top) -->
+        <div class="fixed top-10 right-10 z-50 flex items-center gap-4">
+            <RouterLink to="/" class="p-4 rounded-full bg-card border border-border shadow-xl hover:scale-110 transition-all text-foreground flex items-center gap-2 px-6 group">
+                <ArrowRight class="w-5 h-5 rotate-180 group-hover:-translate-x-1 transition-transform" />
+                <span class="text-[10px] font-black tracking-widest">VOLVER</span>
+            </RouterLink>
+            <button @click="toggleTheme" class="p-4 rounded-full bg-card border border-border shadow-xl hover:scale-110 transition-all text-foreground">
+                <Sun v-if="isDark" class="w-6 h-6" />
+                <Moon v-else class="w-6 h-6" />
+            </button>
+        </div>
+
+        <!-- MAIN CONTAINER -->
+        <div class="w-full max-w-[900px] h-[600px] hidden lg:grid grid-cols-2 bg-card rounded-[3rem] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border border-border relative z-10 animate-in zoom-in duration-700">
+            
+            <!-- LEFT: ARTISTIC SIDE -->
+            <div class="relative overflow-hidden group border-r border-border">
+                <img 
+                    src="https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&q=80&w=2070" 
+                    class="w-full h-full object-cover grayscale opacity-40 group-hover:scale-110 group-hover:grayscale-0 transition-all duration-[3000ms] ease-out"
+                    alt="Luxury Bar"
+                />
+                <div class="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent"></div>
+                
+                <div class="absolute inset-0 p-16 flex flex-col justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-lg">
+                            <Wine class="w-7 h-7 text-white" />
+                        </div>
+                        <span class="text-3xl font-black tracking-tighter">Bar<span class="text-primary">Flow</span></span>
+                    </div>
+
+                    <div class="space-y-6">
+                        <h2 class="text-5xl font-black text-foreground leading-[0.85] italic">
+                            ELITE <br/> 
+                            <span class="text-primary not-italic tracking-tighter">PORTAL</span>
+                        </h2>
+                        <p class="text-foreground/40 text-[10px] font-black tracking-[0.4em] max-w-xs leading-relaxed">
+                            ACCESO RESTRINGIDO A TERMINALES DE GESTIÓN DE ALTO RENDIMIENTO.
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-8 text-[9px] font-black text-foreground/20 tracking-[0.5em]">
+                        <span>EST. 2026</span>
+                        <span>V4.0.0</span>
+                    </div>
                 </div>
-                <h1 class="text-4xl font-black tracking-tighter uppercase">
-                    <template v-if="isFixedCompany">{{ companyCode }} <span class="text-primary">TPV</span></template>
-                    <template v-else>Bar<span class="text-primary">Flow</span> Portal</template>
-                </h1>
-                <p class="text-white/40 font-medium tracking-wide">
-                    {{ isFixedCompany ? 'Terminal de punto de venta privado' : 'Acceso exclusivo para empleados y administración' }}
-                </p>
             </div>
 
-            <!-- Login Card -->
-            <div class="bg-white/5 backdrop-blur-3xl border border-white/10 p-10 rounded-[3rem] shadow-2xl space-y-8">
-                <div class="space-y-6">
-                    <!-- Company Code (Only if not fixed) -->
-                    <div v-if="!isFixedCompany" class="space-y-3">
-                        <label class="text-xs font-black uppercase tracking-[0.2em] text-white/40 ml-1">Código de Empresa</label>
-                        <div class="relative group">
-                            <Building2 class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-primary transition-colors" />
+            <!-- RIGHT: LOGIN SIDE -->
+            <div class="bg-card flex flex-col items-center justify-center p-12 relative">
+                <div class="w-full max-w-xs space-y-8">
+                    <div class="space-y-2">
+                        <h3 class="text-3xl font-black text-foreground tracking-tighter italic">BIENVENIDO</h3>
+                        <div class="h-1 w-10 bg-primary"></div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div v-if="!isFixedCompany" class="space-y-1 group">
+                            <label class="text-[9px] font-black text-primary tracking-[0.4em]">COMPANY CODE</label>
                             <input 
                                 v-model="companyCode"
                                 type="text" 
-                                placeholder="Ej: BCENTRAL"
-                                class="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-white font-bold tracking-widest placeholder:text-white/10 focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all uppercase"
+                                class="w-full bg-transparent border-b border-border py-2 text-xl font-black text-foreground focus:outline-none focus:border-primary transition-all uppercase placeholder:text-foreground/5"
+                                placeholder="CENTRAL-01"
                             />
                         </div>
-                    </div>
 
-                    <!-- Employee PIN -->
-                    <div class="space-y-3">
-                        <label class="text-xs font-black uppercase tracking-[0.2em] text-white/40 ml-1">Pin Personal</label>
-                        <div class="relative group">
-                            <KeyRound class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-primary transition-colors" />
+                        <div class="space-y-1 group">
+                            <label class="text-[9px] font-black text-primary tracking-[0.4em]">PERSONAL PIN</label>
                             <input 
                                 v-model="pin"
                                 type="password" 
                                 maxlength="4"
+                                class="w-full bg-transparent border-b border-border py-2 text-3xl font-black text-foreground focus:outline-none focus:border-primary transition-all tracking-[0.5em] placeholder:text-foreground/5"
                                 placeholder="••••"
-                                class="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-white font-black tracking-[1em] text-2xl placeholder:text-white/10 focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all"
                             />
                         </div>
                     </div>
+
+                    <div class="min-h-[20px]">
+                        <div v-if="error" class="text-red-500 text-[10px] font-black tracking-widest animate-shake">
+                            {{ error }}
+                        </div>
+                    </div>
+
+                    <button 
+                        @click="handleLogin"
+                        :disabled="isLoading"
+                        class="w-full py-5 bg-foreground text-background font-black text-lg tracking-[0.2em] flex items-center justify-center gap-4 hover:bg-primary hover:text-white transition-all transform active:scale-95 disabled:opacity-50 shadow-2xl rounded-2xl"
+                    >
+                        <Loader2 v-if="isLoading" class="w-6 h-6 animate-spin" />
+                        <template v-else>
+                            ACCEDER <ArrowRight class="w-5 h-5" />
+                        </template>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MOBILE VERSION -->
+        <div class="lg:hidden w-full max-w-md px-8 space-y-16 animate-in fade-in duration-700">
+            <div class="text-center space-y-8">
+                <div class="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto shadow-xl">
+                    <Wine class="w-10 h-10 text-white" />
+                </div>
+                <h1 class="text-5xl font-black text-foreground tracking-tighter italic uppercase">Bar<span class="text-primary not-italic">Flow</span></h1>
+            </div>
+
+            <div class="space-y-10">
+                 <div v-if="!isFixedCompany" class="space-y-2 group">
+                    <label class="text-[9px] font-black text-primary tracking-[0.4em]">COMPANY</label>
+                    <input v-model="companyCode" type="text" class="w-full bg-transparent border-b border-border py-4 text-2xl font-black text-foreground focus:outline-none focus:border-primary transition-all uppercase" />
                 </div>
 
-                <!-- Error Message -->
-                <p v-if="error" class="text-destructive text-sm font-black text-center animate-shake">{{ error }}</p>
+                <div class="space-y-2 group">
+                    <label class="text-[9px] font-black text-primary tracking-[0.4em]">PIN</label>
+                    <input v-model="pin" type="password" maxlength="4" class="w-full bg-transparent border-b border-border py-4 text-4xl font-black text-foreground focus:outline-none focus:border-primary transition-all tracking-[1em]" />
+                </div>
 
-                <!-- Submit Button -->
-                <button 
-                    @click="handleLogin"
-                    :disabled="isLoading"
-                    class="w-full bg-primary text-white py-6 rounded-2xl font-black text-xl flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/30 disabled:opacity-50 disabled:scale-100"
-                >
+                <button @click="handleLogin" :disabled="isLoading" class="w-full py-8 bg-foreground text-background font-black text-xl tracking-[0.2em] flex items-center justify-center rounded-3xl shadow-2xl">
                     <Loader2 v-if="isLoading" class="w-6 h-6 animate-spin" />
-                    <template v-else>
-                        Entrar en TPV <ArrowRight class="w-6 h-6" />
-                    </template>
+                    <span v-else>ACCEDER</span>
                 </button>
             </div>
+        </div>
 
-            <!-- Footer -->
-            <div class="text-center space-y-4">
-                <RouterLink 
-                    v-if="isFixedCompany" 
-                    to="/portal" 
-                    class="text-primary/60 hover:text-primary text-xs font-black uppercase tracking-widest transition-colors"
-                >
-                    No soy de esta empresa
-                </RouterLink>
-
-                <RouterLink to="/" class="text-white/10 hover:text-white/40 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors flex items-center justify-center gap-2 pt-4">
-                    BarFlow SaaS Platform <Wine class="w-3 h-3" />
-                </RouterLink>
-            </div>
+        <!-- DECORATIVE TEXT -->
+        <div class="fixed bottom-10 left-10 text-foreground/5 font-black text-[12vw] italic pointer-events-none select-none uppercase">
+            Portal
         </div>
     </div>
 </template>
 
 <style scoped>
-.text-primary { color: #00DBB7; }
-.bg-primary { background-color: #00DBB7; }
-.text-destructive { color: #ff3b3b; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap');
+
+:deep(body) {
+    font-family: 'Inter', sans-serif;
+}
+
+@keyframes pulse-slow {
+    0%, 100% { opacity: 0.1; transform: scale(1) translate(25%, -25%); }
+    50% { opacity: 0.2; transform: scale(1.1) translate(20%, -20%); }
+}
+.animate-pulse-slow { animation: pulse-slow 10s infinite ease-in-out; }
 
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
 }
-.animate-shake {
-    animation: shake 0.2s ease-in-out 0s 2;
-}
+.animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
+
+::-webkit-scrollbar { display: none; }
 </style>

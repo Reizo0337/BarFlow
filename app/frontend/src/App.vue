@@ -27,7 +27,7 @@
     
     <!-- Full screen views for Landing, Portal, etc. -->
     <template v-else>
-      <main class="flex-1 overflow-auto bg-[#050505]">
+      <main class="flex-1 overflow-auto bg-[#0a0a0c]">
         <RouterView />
       </main>
     </template>
