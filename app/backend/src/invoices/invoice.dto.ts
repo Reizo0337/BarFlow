@@ -23,6 +23,36 @@ export class CreateInvoiceDto {
     @IsString()
     @IsOptional()
     paymentMethod?: string;
+
+    @IsNumber()
+    @IsOptional()
+    @Min(0)
+    taxableBase?: number;
+
+    @IsNumber()
+    @IsOptional()
+    @Min(0)
+    vatRate?: number;
+
+    @IsNumber()
+    @IsOptional()
+    @Min(0)
+    vatAmount?: number;
+
+    @IsString()
+    @IsOptional()
+    series?: string;
+
+    @IsString()
+    @IsOptional()
+    terminalId?: string;
+
+    @IsOptional()
+    items?: any[];
+
+    @IsNumber()
+    @IsOptional()
+    clientId?: number;
 }
 
 export class UpdateInvoiceDto {
@@ -30,9 +60,9 @@ export class UpdateInvoiceDto {
     @IsOptional()
     invoiceNumber?: string;
 
-    @IsEnum(['in', 'out'])
+    @IsEnum(['in', 'out', 'sale', 'purchase'])
     @IsOptional()
-    type?: 'in' | 'out';
+    type?: 'in' | 'out' | 'sale' | 'purchase';
 
     @IsString()
     @IsOptional()
@@ -46,4 +76,8 @@ export class UpdateInvoiceDto {
     @IsEnum(['paid', 'pending', 'cancelled'])
     @IsOptional()
     status?: 'paid' | 'pending' | 'cancelled';
+
+    @IsString()
+    @IsOptional()
+    paymentMethod?: string;
 }

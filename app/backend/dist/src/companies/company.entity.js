@@ -63,7 +63,7 @@ __decorate([
     __metadata("design:type", Number)
 ], Company.prototype, "vatRate", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 1 }),
+    (0, typeorm_1.Column)({ type: 'bigint', default: 1, transformer: { to: (v) => v, from: (v) => parseInt(v) } }),
     __metadata("design:type", Number)
 ], Company.prototype, "nextInvoiceNumber", void 0);
 __decorate([

@@ -16,6 +16,7 @@ import {
 import api from '@/services/api'
 import { useUIStore } from '@/stores/ui'
 import { useRouter } from 'vue-router'
+import AppDialog from '@/components/ui/AppDialog.vue'
 
 // Components
 import FiscalConfig from '@/components/admin/FiscalConfig.vue'
@@ -51,6 +52,15 @@ const config = ref({
 const employees = ref<any[]>([])
 const isEmployeeModalOpen = ref(false)
 const editingEmployee = ref<any>(null)
+
+// Dialog State
+const dialog = ref({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info' as any,
+    onConfirm: () => {}
+})
 
 // --- Methods ---
 const fetchSettings = async () => {
@@ -99,11 +109,23 @@ const handleEmployeeSave = async (formData: any) => {
 }
 
 const deleteEmployee = async (id: number) => {
-    if (!confirm('¿Estás seguro de eliminar a este empleado?')) return
-    try {
-        await api.delete(`/users/${id}`)
-        await fetchEmployees()
-    } catch (error) { console.error('Error deleting employee:', error) }
+    dialog.value = {
+        isOpen: true,
+        title: 'Eliminar Empleado',
+        message: '¿Estás seguro de que deseas eliminar a este empleado? Esta acción no se puede deshacer.',
+        type: 'confirm',
+        onConfirm: async () => {
+            try {
+                await api.delete(`/users/${id}`)
+                await fetchEmployees()
+                dialog.value.isOpen = false
+            } catch (error) { 
+                console.error('Error deleting employee:', error)
+                dialog.value.type = 'error'
+                dialog.value.message = 'No se pudo eliminar al empleado.'
+            }
+        }
+    }
 }
 
 const openEditEmployee = (emp: any) => {
@@ -198,6 +220,16 @@ onUnmounted(() => {
     </div>
 
     <EmployeeModal :is-open="isEmployeeModalOpen" :editing-employee="editingEmployee" :is-loading="isLoading" @close="isEmployeeModalOpen = false" @save="handleEmployeeSave" />
+    
+    <AppDialog 
+        :is-open="dialog.isOpen"
+        :title="dialog.title"
+        :message="dialog.message"
+        :type="dialog.type"
+        @confirm="dialog.onConfirm"
+        @close="dialog.isOpen = false"
+        @cancel="dialog.isOpen = false"
+    />
   </div>
 </template>
 

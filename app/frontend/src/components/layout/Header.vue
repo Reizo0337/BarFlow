@@ -4,9 +4,10 @@ import { useThemeStore } from '@/stores/theme'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { useShiftsStore } from '@/stores/shifts'
-import { Minus, Square, X, Copy, Sun, Moon, Menu, ChevronDown, User, LogOut } from 'lucide-vue-next'
+import { Minus, Square, X, Copy, Sun, Moon, Menu, ChevronDown, User, LogOut, ReceiptText, ShieldCheck } from 'lucide-vue-next'
 
 import { useRouter } from 'vue-router'
+import AppDialog from '@/components/ui/AppDialog.vue'
 
 const themeStore = useThemeStore()
 const uiStore = useUIStore()
@@ -15,6 +16,24 @@ const shiftsStore = useShiftsStore()
 const router = useRouter()
 
 const isUserMenuOpen = ref(false)
+
+// Dialog State
+const dialog = ref({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info' as any
+})
+
+const showLegalInfo = () => {
+    isUserMenuOpen.value = false
+    dialog.value = {
+        isOpen: true,
+        title: 'Declaración Responsable',
+        message: 'Este software cumple con los requisitos establecidos en la Ley 11/2021 (Ley Antifraude) y el Real Decreto 1007/2023 (Reglamento Veri*factu). Características integradas: Inalterabilidad de registros, trazabilidad Hash SHA-256, conservación íntegra de auditoría y reportes Z diarios.',
+        type: 'success'
+    }
+}
 
 const handleLogout = async () => {
   // End shift if active before logging out
@@ -54,8 +73,8 @@ declare global {
           @click="isUserMenuOpen = !isUserMenuOpen"
           class="flex items-center gap-3 pl-2 pr-4 py-1.5 rounded-2xl hover:bg-accent/30 transition-all active:scale-95 group"
         >
-          <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-primary/40 text-white text-xs font-black border border-primary/20 shadow-sm">
-            {{ authStore.user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) }}
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-accent/20 text-primary border border-primary/10 shadow-sm">
+            <User class="w-5 h-5" />
           </div>
           <div class="hidden sm:block text-left">
             <p class="text-xs font-black leading-none mb-1 text-foreground/80 uppercase tracking-tighter">{{ authStore.user.name }}</p>
@@ -78,13 +97,12 @@ declare global {
                 <p class="text-[9px] font-bold text-foreground/30 uppercase tracking-widest">{{ authStore.user.role }}</p>
              </div>
           </div>
-          <div class="p-2">
-            <button 
-              @click="handleLogout"
-              class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-destructive/10 text-destructive transition-all font-black text-xs uppercase letter-spacing-widest"
-            >
-              <LogOut class="w-4 h-4" />
-              Cerrar Sesión
+          <div class="p-2 border-b border-border">
+            <button @click="showLegalInfo" class="w-full flex items-center gap-3 p-3 rounded-xl text-foreground/70 hover:bg-primary/10 hover:text-primary transition-all text-sm font-bold">
+              <ShieldCheck class="w-4 h-4" /> Cumplimiento Legal
+            </button>
+            <button @click="handleLogout" class="w-full flex items-center gap-3 p-3 rounded-xl text-destructive hover:bg-destructive/10 transition-all text-sm font-bold">
+              <LogOut class="w-4 h-4" /> Cerrar Sesión
             </button>
           </div>
         </div>
@@ -107,6 +125,16 @@ declare global {
       </button>
 
     </div>
+    
+    <AppDialog 
+        :is-open="dialog.isOpen"
+        :title="dialog.title"
+        :message="dialog.message"
+        :type="dialog.type"
+        @confirm="dialog.isOpen = false"
+        @close="dialog.isOpen = false"
+        @cancel="dialog.isOpen = false"
+    />
   </div>
 </template>
 

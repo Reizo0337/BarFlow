@@ -22,6 +22,8 @@ const shifts_module_1 = require("./shifts/shifts.module");
 const tables_module_1 = require("./tables/tables.module");
 const ai_module_1 = require("./ai/ai.module");
 const audit_logs_module_1 = require("./audit-logs/audit-logs.module");
+const fiscal_module_1 = require("./fiscal/fiscal.module");
+const clients_module_1 = require("./clients/clients.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -54,6 +56,8 @@ exports.AppModule = AppModule = __decorate([
             tables_module_1.TablesModule,
             ai_module_1.AiModule,
             audit_logs_module_1.AuditLogsModule,
+            fiscal_module_1.FiscalModule,
+            clients_module_1.ClientsModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService, seed_service_1.SeedService],

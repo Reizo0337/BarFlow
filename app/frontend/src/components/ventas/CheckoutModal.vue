@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { X, ReceiptText, Banknote, CreditCard, Printer, Loader2, Delete } from 'lucide-vue-next'
+import { ref, computed, onMounted } from 'vue'
+import { X, ReceiptText, Banknote, CreditCard, Printer, Loader2, Delete, Users, UserCheck } from 'lucide-vue-next'
+import api from '@/services/api'
 
 const props = defineProps<{
   isOpen: boolean
@@ -15,6 +16,20 @@ const emit = defineEmits(['close', 'checkout'])
 const paymentMethod = ref<'cash' | 'card'>('cash')
 const amountReceived = ref(0)
 const shouldPrintTicket = ref(true)
+const selectedClientId = ref<number | null>(null)
+const clients = ref<any[]>([])
+const isClientSearchOpen = ref(false)
+
+onMounted(async () => {
+  try {
+    const res = await api.get('/clients')
+    clients.value = res.data
+  } catch (e) { console.error(e) }
+})
+
+const selectedClient = computed(() => {
+  return clients.value.find(c => c.id === selectedClientId.value)
+})
 
 const changeDue = computed(() => {
   if (paymentMethod.value !== 'cash') return 0
@@ -47,7 +62,8 @@ const quickCash = (amount: number) => {
 const handleCheckout = () => {
   emit('checkout', {
     paymentMethod: paymentMethod.value,
-    shouldPrintTicket: shouldPrintTicket.value
+    shouldPrintTicket: shouldPrintTicket.value,
+    clientId: selectedClientId.value
   })
 }
 </script>
@@ -63,6 +79,42 @@ const handleCheckout = () => {
             <ReceiptText class="w-6 h-6" />
           </div>
           <h3 class="text-xl font-black">Resumen</h3>
+        </div>
+
+        <!-- Client Selector -->
+        <div class="mb-6 relative">
+            <span class="text-[10px] font-black uppercase tracking-widest text-foreground/40 ml-1">Asignar Cliente</span>
+            <div 
+                @click="isClientSearchOpen = !isClientSearchOpen"
+                class="mt-1 flex items-center justify-between p-3 bg-accent/10 border border-border rounded-2xl cursor-pointer hover:border-primary/50 transition-all"
+                :class="{ 'border-primary shadow-lg shadow-primary/10': isClientSearchOpen }"
+            >
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <UserCheck v-if="selectedClient" class="w-5 h-5 text-primary shrink-0" />
+                    <Users v-else class="w-5 h-5 text-foreground/20 shrink-0" />
+                    <div class="truncate">
+                        <p class="text-xs font-black truncate uppercase">{{ selectedClient?.name || 'Cliente Genérico' }}</p>
+                        <p v-if="selectedClient" class="text-[10px] font-bold text-foreground/40">{{ selectedClient.fiscalId }}</p>
+                    </div>
+                </div>
+                <X v-if="selectedClientId" @click.stop="selectedClientId = null" class="w-4 h-4 text-destructive hover:scale-110 transition-all" />
+            </div>
+
+            <!-- Client Dropdown -->
+            <div v-if="isClientSearchOpen" class="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-2xl z-[120] max-h-48 overflow-y-auto no-scrollbar animate-in slide-in-from-top-2 duration-200">
+                <div 
+                    v-for="client in clients" 
+                    :key="client.id" 
+                    @click="selectedClientId = client.id; isClientSearchOpen = false"
+                    class="p-3 border-b border-border/50 hover:bg-primary/5 cursor-pointer transition-colors"
+                >
+                    <p class="text-xs font-black uppercase">{{ client.name }}</p>
+                    <p class="text-[10px] font-bold text-foreground/40">{{ client.fiscalId }}</p>
+                </div>
+                <div v-if="clients.length === 0" class="p-4 text-center text-[10px] font-bold text-foreground/30 italic">
+                    No hay clientes registrados.
+                </div>
+            </div>
         </div>
         
         <div class="space-y-3 mb-6">

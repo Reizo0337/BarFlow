@@ -7,14 +7,14 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 @Controller('audit-logs')
 @UseGuards(JwtAuthGuard)
 export class AuditLogsController {
-    constructor(private readonly auditLogsService: AuditLogsService) {}
+    constructor(private readonly auditLogsService: AuditLogsService) { }
 
     @Post()
     @ApiOperation({ summary: 'Create an audit log entry (Law Compliance)' })
     async createLog(@Request() req, @Body() body: { action: string, details: any, reason?: string }) {
         return await this.auditLogsService.log(
-            req.user,
-            req.user.company,
+            { id: req.user.userId || req.user.id } as any,
+            { id: req.user.companyId } as any,
             body.action,
             body.details,
             body.reason
@@ -24,6 +24,6 @@ export class AuditLogsController {
     @Get()
     @ApiOperation({ summary: 'Get all logs for the current company' })
     async getLogs(@Request() req) {
-        return await this.auditLogsService.findByCompany(req.user.company.id);
+        return await this.auditLogsService.findByCompany(req.user.companyId);
     }
 }

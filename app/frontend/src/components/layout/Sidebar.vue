@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Home, Receipt, Settings, BarChart3, ChevronLeft, ChevronRight, Menu, ShieldCheck, Box, FileText, PieChart } from 'lucide-vue-next'
+import { Home, Receipt, Settings, BarChart3, ChevronLeft, ChevronRight, Menu, ShieldCheck, Box, FileText, PieChart, Layers, Users } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
 import { useShiftsStore } from '@/stores/shifts'
 
@@ -39,12 +39,7 @@ const isExpanded = computed(() => !uiStore.isSidebarCollapsed)
                 class="flex items-center transition-all duration-300 overflow-hidden"
                 :class="isExpanded ? 'gap-3' : 'justify-center'"
             >
-                <div 
-                    class="rounded-lg flex-shrink-0 flex items-center justify-center transition-all duration-300"
-                    :class="isExpanded ? 'w-7 h-7 bg-primary text-white shadow-lg shadow-primary/20' : 'w-8 h-8 bg-primary/10 text-primary shadow-sm'"
-                >
-                    <span class="font-bold italic" :class="isExpanded ? 'text-[10px]' : 'text-xs'">B</span>
-                </div>
+                <Layers class="w-7 h-7 text-primary" />
                 <h1 
                     v-if="isExpanded"
                     class="text-lg font-black text-foreground tracking-tighter uppercase whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300"
@@ -95,6 +90,7 @@ const isExpanded = computed(() => !uiStore.isSidebarCollapsed)
                     <li v-for="link in [
                         { to: '/app/inventario', icon: Box, label: 'Inventario' },
                         { to: '/app/facturas', icon: FileText, label: 'Facturas' },
+                        { to: '/app/clientes', icon: Users, label: 'Clientes' },
                         { to: '/app/admin', icon: ShieldCheck, label: 'Panel Admin' }
                     ]" :key="link.to">
                         <RouterLink 

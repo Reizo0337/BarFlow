@@ -12,6 +12,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Invoice = void 0;
 const typeorm_1 = require("typeorm");
 const company_entity_1 = require("../companies/company.entity");
+const invoice_item_entity_1 = require("./invoice-item.entity");
+const client_entity_1 = require("../clients/client.entity");
 const numeric_transformer_1 = require("../common/numeric-transformer");
 let Invoice = class Invoice {
     id;
@@ -19,12 +21,21 @@ let Invoice = class Invoice {
     type;
     clientName;
     amount;
-    status;
+    taxableBase;
+    vatRate;
+    vatAmount;
+    series;
+    terminalId;
+    fiscalStatus;
+    aeatSent;
+    aeatSentAt;
     paymentMethod;
     previousHash;
     hash;
     createdAt;
     company;
+    items;
+    client;
 };
 exports.Invoice = Invoice;
 __decorate([
@@ -52,9 +63,52 @@ __decorate([
     __metadata("design:type", Number)
 ], Invoice.prototype, "amount", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'paid' }),
+    (0, typeorm_1.Column)('decimal', {
+        precision: 10,
+        scale: 2,
+        transformer: new numeric_transformer_1.ColumnNumericTransformer(),
+        default: 0
+    }),
+    __metadata("design:type", Number)
+], Invoice.prototype, "taxableBase", void 0);
+__decorate([
+    (0, typeorm_1.Column)('decimal', {
+        precision: 5,
+        scale: 2,
+        transformer: new numeric_transformer_1.ColumnNumericTransformer(),
+        default: 10
+    }),
+    __metadata("design:type", Number)
+], Invoice.prototype, "vatRate", void 0);
+__decorate([
+    (0, typeorm_1.Column)('decimal', {
+        precision: 10,
+        scale: 2,
+        transformer: new numeric_transformer_1.ColumnNumericTransformer(),
+        default: 0
+    }),
+    __metadata("design:type", Number)
+], Invoice.prototype, "vatAmount", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: 'A' }),
     __metadata("design:type", String)
-], Invoice.prototype, "status", void 0);
+], Invoice.prototype, "series", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: 'T01' }),
+    __metadata("design:type", String)
+], Invoice.prototype, "terminalId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: 'normal' }),
+    __metadata("design:type", String)
+], Invoice.prototype, "fiscalStatus", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], Invoice.prototype, "aeatSent", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true }),
+    __metadata("design:type", Date)
+], Invoice.prototype, "aeatSentAt", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
@@ -76,6 +130,14 @@ __decorate([
     (0, typeorm_1.ManyToOne)(() => company_entity_1.Company),
     __metadata("design:type", company_entity_1.Company)
 ], Invoice.prototype, "company", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => invoice_item_entity_1.InvoiceItem, (item) => item.invoice, { cascade: true }),
+    __metadata("design:type", Array)
+], Invoice.prototype, "items", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => client_entity_1.Client, (client) => client.invoices, { nullable: true }),
+    __metadata("design:type", client_entity_1.Client)
+], Invoice.prototype, "client", void 0);
 exports.Invoice = Invoice = __decorate([
     (0, typeorm_1.Entity)()
 ], Invoice);

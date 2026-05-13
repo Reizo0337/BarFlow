@@ -30,7 +30,7 @@ export class Company {
     @Column({ type: 'decimal', precision: 5, scale: 2, default: 10.00 })
     vatRate: number;
 
-    @Column({ default: 1 })
+    @Column({ type: 'bigint', default: 1, transformer: { to: (v) => v, from: (v) => parseInt(v) } })
     nextInvoiceNumber: number;
 
     @OneToMany(() => User, (user) => user.company)

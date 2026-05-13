@@ -23,10 +23,10 @@ let AuditLogsController = class AuditLogsController {
         this.auditLogsService = auditLogsService;
     }
     async createLog(req, body) {
-        return await this.auditLogsService.log(req.user, req.user.company, body.action, body.details, body.reason);
+        return await this.auditLogsService.log({ id: req.user.userId || req.user.id }, { id: req.user.companyId }, body.action, body.details, body.reason);
     }
     async getLogs(req) {
-        return await this.auditLogsService.findByCompany(req.user.company.id);
+        return await this.auditLogsService.findByCompany(req.user.companyId);
     }
 };
 exports.AuditLogsController = AuditLogsController;

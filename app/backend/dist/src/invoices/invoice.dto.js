@@ -18,6 +18,13 @@ class CreateInvoiceDto {
     amount;
     status;
     paymentMethod;
+    taxableBase;
+    vatRate;
+    vatAmount;
+    series;
+    terminalId;
+    items;
+    clientId;
 }
 exports.CreateInvoiceDto = CreateInvoiceDto;
 __decorate([
@@ -49,12 +56,50 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateInvoiceDto.prototype, "paymentMethod", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], CreateInvoiceDto.prototype, "taxableBase", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], CreateInvoiceDto.prototype, "vatRate", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], CreateInvoiceDto.prototype, "vatAmount", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "series", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "terminalId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Array)
+], CreateInvoiceDto.prototype, "items", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], CreateInvoiceDto.prototype, "clientId", void 0);
 class UpdateInvoiceDto {
     invoiceNumber;
     type;
     clientName;
     amount;
     status;
+    paymentMethod;
 }
 exports.UpdateInvoiceDto = UpdateInvoiceDto;
 __decorate([
@@ -63,7 +108,7 @@ __decorate([
     __metadata("design:type", String)
 ], UpdateInvoiceDto.prototype, "invoiceNumber", void 0);
 __decorate([
-    (0, class_validator_1.IsEnum)(['in', 'out']),
+    (0, class_validator_1.IsEnum)(['in', 'out', 'sale', 'purchase']),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], UpdateInvoiceDto.prototype, "type", void 0);
@@ -83,4 +128,9 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], UpdateInvoiceDto.prototype, "status", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateInvoiceDto.prototype, "paymentMethod", void 0);
 //# sourceMappingURL=invoice.dto.js.map

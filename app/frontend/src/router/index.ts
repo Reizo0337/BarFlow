@@ -62,6 +62,16 @@ const router = createRouter({
           path: 'estadisticas',
           name: 'estadisticas',
           component: () => import('../views/StatisticsView.vue')
+        },
+        {
+          path: 'cierre',
+          name: 'cierre',
+          component: () => import('../views/DailyClosingView.vue')
+        },
+        {
+          path: 'clientes',
+          name: 'clientes',
+          component: () => import('../views/ClientsView.vue')
         }
       ]
     },

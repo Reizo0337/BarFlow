@@ -10,9 +10,11 @@ import {
     Play, 
     Square,
     Clock,
-    ChevronRight
+    ChevronRight,
+    ReceiptText
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
+import api from '@/services/api'
 
 // Stores
 import { useAuthStore } from '@/stores/auth'
@@ -77,6 +79,10 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
 const startShift = () => shiftsStore.startShift()
 const stopShift = () => shiftsStore.endShift()
+
+const handleDailyClosing = () => {
+    router.push('/app/cierre')
+}
 </script>
 
 <template>
@@ -155,6 +161,17 @@ const stopShift = () => shiftsStore.endShift()
             <StatCard title="Recaudación" :value="`$${invoicesStore.todayRevenue.toFixed(2)}`" :icon="CircleDollarSign" variant="success" footer="Ingresos brutos" />
             <StatCard title="Top Empleado" value="Ana García" :icon="Trophy" footer="Rendimiento destacado" />
             
+            <button @click="handleDailyClosing" class="w-full text-left touch-manipulation group">
+                <StatCard 
+                  title="Cierre" 
+                  value="Cierre (Z)" 
+                  :icon="ReceiptText" 
+                  variant="primary" 
+                  footer="Cierre de caja diario"
+                  class="group-hover:border-primary/30"
+                />
+            </button>
+
             <button @click="handleLogout" class="w-full text-left touch-manipulation group">
                 <StatCard 
                   title="Sesión" 

@@ -1,29 +1,51 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Receipt, TrendingUp, TrendingDown, Eye, Download, Calendar, Loader2 } from 'lucide-vue-next'
+import { Receipt, TrendingUp, TrendingDown, Eye, Download, Calendar, Loader2, Printer, Search, Filter, FileJson, X, CreditCard, Banknote } from 'lucide-vue-next'
 import { useInvoicesStore } from '@/stores/invoices'
+import api from '@/services/api'
+import { generateTicketPDF } from '@/utils/pdf-generator'
 
 // UI Kit
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import StatCard from '@/components/ui/StatCard.vue'
+import AppDialog from '@/components/ui/AppDialog.vue'
 
 const invoicesStore = useInvoicesStore()
 const activeType = ref<'all' | 'in' | 'out'>('all')
+const searchQuery = ref('')
+const isDetailModalOpen = ref(false)
+const selectedInvoice = ref<any>(null)
+const isLoadingDetail = ref(false)
+const companySettings = ref<any>({})
 
-onMounted(() => {
+onMounted(async () => {
   invoicesStore.fetchInvoices()
+  try {
+    const res = await api.get('/companies/settings')
+    companySettings.value = res.data
+  } catch (e) { console.error(e) }
 })
 
 const filteredInvoices = computed(() => {
-  if (activeType.value === 'all') return invoicesStore.invoices
-  return invoicesStore.invoices.filter(inv => inv.type === activeType.value)
+  let list = invoicesStore.invoices
+  if (activeType.value !== 'all') {
+    list = list.filter(inv => inv.type === activeType.value)
+  }
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    list = list.filter(inv => 
+        inv.invoiceNumber.toLowerCase().includes(q) || 
+        inv.clientName.toLowerCase().includes(q)
+    )
+  }
+  return list
 })
 
 const stats = computed(() => {
   const incomes = invoicesStore.invoices
-    .filter(i => i.type === 'out' && i.status === 'paid')
+    .filter(i => i.type === 'out' && i.fiscalStatus !== 'cancelled')
     .reduce((acc, i) => acc + Number(i.amount), 0)
   
   const expenses = invoicesStore.invoices
@@ -33,132 +55,302 @@ const stats = computed(() => {
   return { net: incomes - expenses, incomes, expenses }
 })
 
-const getStatusVariant = (status: string) => {
-  switch (status) {
-    case 'paid': return 'success'
-    case 'pending': return 'warning'
-    case 'cancelled': return 'error'
-    default: return 'neutral'
-  }
+const viewDetail = async (invoice: any) => {
+    selectedInvoice.value = invoice
+    isDetailModalOpen.value = true
+    isLoadingDetail.value = true
+    try {
+        const response = await api.get(`/invoices/${invoice.id}`)
+        selectedInvoice.value = response.data
+    } catch (error) {
+        console.error('Error fetching invoice details:', error)
+    } finally {
+        isLoadingDetail.value = false
+    }
 }
 
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case 'paid': return 'Pagada'
-    case 'pending': return 'Pendiente'
-    case 'cancelled': return 'Cancelada'
-    default: return status
+const reprintTicket = async (invoice: any) => {
+    let invToPrint = invoice
+    if (!invoice.items) {
+        try {
+            const res = await api.get(`/invoices/${invoice.id}`)
+            invToPrint = res.data
+        } catch (e) { return }
+    }
+    
+    // Map items back to the format the PDF generator expects
+    const cartFormat = invToPrint.items.map((item: any) => ({
+        name: item.productName,
+        quantity: item.quantity,
+        price: item.price
+    }))
+
+    await generateTicketPDF(invToPrint, cartFormat, companySettings.value, companySettings.value.currency || '€')
+}
+
+const exportVerifactu = async (invoice: any) => {
+  try {
+    const response = await api.get(`/invoices/${invoice.id}/verifactu`)
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(response.data, null, 2))
+    const downloadAnchorNode = document.createElement('a')
+    downloadAnchorNode.setAttribute("href", dataStr)
+    downloadAnchorNode.setAttribute("download", `Verifactu_${invoice.series}_${invoice.invoiceNumber}.json`)
+    document.body.appendChild(downloadAnchorNode)
+    downloadAnchorNode.click()
+    downloadAnchorNode.remove()
+  } catch (error) {
+    console.error('Error exporting Verifactu:', error)
   }
 }
 
 const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return new Date(dateStr).toLocaleDateString('es-ES', { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const getStatusVariant = (status: string) => {
+  switch (status) {
+    case 'normal': return 'success'
+    case 'rectificative': return 'warning'
+    case 'cancelled': return 'error'
+    default: return 'neutral'
+  }
 }
 </script>
 
 <template>
-  <div class="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+  <div class="space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20">
+    <!-- Header -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
       <div>
-        <h1 class="text-5xl font-black tracking-tighter text-foreground uppercase">Facturación</h1>
-        <p class="text-foreground/40 font-bold italic">Control de flujos de caja y obligaciones fiscales.</p>
+        <h1 class="text-5xl font-black tracking-tighter text-foreground uppercase leading-none">Facturación</h1>
+        <p class="text-foreground/40 font-bold italic mt-2">Registros inalterables y cumplimiento fiscal AEAT.</p>
       </div>
       
-      <div class="flex items-center gap-2 p-2 bg-accent/20 rounded-3xl w-fit">
-        <BaseButton 
-          :variant="activeType === 'all' ? 'primary' : 'ghost'" 
-          size="sm" 
-          @click="activeType = 'all'"
-        >Todas</BaseButton>
-        <BaseButton 
-          :variant="activeType === 'out' ? 'primary' : 'ghost'" 
-          size="sm" 
-          @click="activeType = 'out'"
-        >
-          <template #icon-left><TrendingUp class="w-4 h-4" /></template>
-          Ventas
-        </BaseButton>
-        <BaseButton 
-          :variant="activeType === 'in' ? 'primary' : 'ghost'" 
-          size="sm" 
-          @click="activeType = 'in'"
-        >
-          <template #icon-left><TrendingDown class="w-4 h-4" /></template>
-          Compras
-        </BaseButton>
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="relative">
+            <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/30" />
+            <input 
+                v-model="searchQuery"
+                type="text" 
+                placeholder="Buscar por nº o cliente..." 
+                class="pl-11 pr-4 py-3 bg-accent/10 border border-border rounded-2xl text-sm font-bold focus:border-primary transition-all w-64"
+            />
+        </div>
+        <div class="flex items-center gap-1 p-1.5 bg-accent/10 rounded-2xl border border-border">
+            <button 
+                v-for="type in (['all', 'out', 'in'] as const)" 
+                :key="type"
+                @click="activeType = type"
+                class="px-4 py-2 rounded-xl text-xs font-black uppercase transition-all"
+                :class="activeType === type ? 'bg-primary text-white shadow-lg' : 'text-foreground/40 hover:text-foreground'"
+            >
+                {{ type === 'all' ? 'Todo' : type === 'out' ? 'Ventas' : 'Compras' }}
+            </button>
+        </div>
       </div>
     </div>
 
     <!-- Stats Summary -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <StatCard 
-        title="Balance General" 
-        :value="`$${stats.net.toFixed(2)}`" 
+        title="Balance Fiscal" 
+        :value="`${companySettings.currency || '€'}${stats.net.toFixed(2)}`" 
         :icon="Receipt" 
-        footer="Neto del periodo actual"
+        footer="Resultado neto (Ingresos - Gastos)"
+        class="border-primary/20 bg-primary/5"
       />
-      <BaseCard class="bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/10 p-8 space-y-4">
-        <p class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Total Ingresos</p>
-        <p class="text-4xl font-black text-emerald-500 tracking-tighter">${{ stats.incomes.toFixed(2) }}</p>
+      <BaseCard class="bg-card border-border p-8 space-y-4">
+        <div class="flex items-center justify-between">
+            <p class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Ingresos Totales</p>
+            <TrendingUp class="w-4 h-4 text-emerald-500" />
+        </div>
+        <p class="text-4xl font-black text-foreground tracking-tighter">{{ companySettings.currency || '€' }}{{ stats.incomes.toFixed(2) }}</p>
         <div class="h-1.5 bg-emerald-500/10 rounded-full overflow-hidden">
-          <div class="h-full bg-emerald-500 transition-all duration-1000" :style="{ width: '100%' }"></div>
+          <div class="h-full bg-emerald-500" :style="{ width: '100%' }"></div>
         </div>
       </BaseCard>
-      <BaseCard class="bg-gradient-to-br from-destructive/10 to-transparent border-destructive/10 p-8 space-y-4">
-        <p class="text-[10px] font-black text-destructive uppercase tracking-widest">Total Gastos</p>
-        <p class="text-4xl font-black text-destructive tracking-tighter">${{ stats.expenses.toFixed(2) }}</p>
+      <BaseCard class="bg-card border-border p-8 space-y-4">
+        <div class="flex items-center justify-between">
+            <p class="text-[10px] font-black text-destructive uppercase tracking-widest">Gastos Totales</p>
+            <TrendingDown class="w-4 h-4 text-destructive" />
+        </div>
+        <p class="text-4xl font-black text-foreground tracking-tighter">{{ companySettings.currency || '€' }}{{ stats.expenses.toFixed(2) }}</p>
         <div class="h-1.5 bg-destructive/10 rounded-full overflow-hidden">
-          <div class="h-full bg-destructive transition-all duration-1000" :style="{ width: '100%' }"></div>
+          <div class="h-full bg-destructive" :style="{ width: '100%' }"></div>
         </div>
       </BaseCard>
     </div>
 
-    <!-- Invoice List -->
-    <div class="space-y-4">
-      <div v-if="invoicesStore.isLoading" class="flex flex-col items-center justify-center py-20 text-foreground/20 italic space-y-4">
-        <Loader2 class="w-10 h-10 animate-spin" />
-        <p>Sincronizando con el servidor...</p>
-      </div>
+    <!-- Invoice List Table -->
+    <div class="bg-card border border-border rounded-[2.5rem] overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-accent/5 border-b border-border">
+                        <th class="p-6 text-[10px] font-black uppercase tracking-widest text-foreground/30">Referencia / Tipo</th>
+                        <th class="p-6 text-[10px] font-black uppercase tracking-widest text-foreground/30">Cliente</th>
+                        <th class="p-6 text-[10px] font-black uppercase tracking-widest text-foreground/30 text-center">Estado Fiscal</th>
+                        <th class="p-6 text-[10px] font-black uppercase tracking-widest text-foreground/30 text-right">Importe</th>
+                        <th class="p-6 text-[10px] font-black uppercase tracking-widest text-foreground/30 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border/50">
+                    <tr v-if="invoicesStore.isLoading">
+                        <td colspan="5" class="p-20 text-center">
+                            <div class="flex flex-col items-center gap-4 text-foreground/20 italic">
+                                <Loader2 class="w-10 h-10 animate-spin" />
+                                <p>Cargando registros fiscales...</p>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr v-else-if="filteredInvoices.length === 0">
+                        <td colspan="5" class="p-20 text-center text-foreground/20 italic font-bold">
+                            No se encontraron registros para esta selección.
+                        </td>
+                    </tr>
+                    <tr v-for="inv in filteredInvoices" :key="inv.id" class="hover:bg-accent/5 transition-colors group">
+                        <td class="p-6">
+                            <div class="flex items-center gap-4">
+                                <div 
+                                    class="w-10 h-10 rounded-xl flex items-center justify-center"
+                                    :class="inv.type === 'in' ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-500'"
+                                >
+                                    <TrendingDown v-if="inv.type === 'in'" class="w-5 h-5" />
+                                    <TrendingUp v-else class="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-foreground tracking-tight">{{ inv.series }}-{{ inv.invoiceNumber }}</p>
+                                    <p class="text-[10px] font-bold text-foreground/30 uppercase">{{ formatDate(inv.createdAt) }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-6">
+                            <span class="font-bold text-sm text-foreground/70">{{ inv.clientName }}</span>
+                        </td>
+                        <td class="p-6 text-center">
+                            <BaseBadge :variant="getStatusVariant(inv.fiscalStatus)">
+                                {{ inv.fiscalStatus === 'normal' ? 'Emitida' : inv.fiscalStatus === 'rectificative' ? 'Rectificativa' : 'Anulada' }}
+                            </BaseBadge>
+                        </td>
+                        <td class="p-6 text-right">
+                            <p class="text-xl font-black tracking-tighter" :class="inv.type === 'in' ? 'text-foreground/40' : 'text-primary'">
+                                {{ inv.type === 'in' ? '-' : '' }}{{ companySettings.currency || '€' }}{{ Number(inv.amount).toFixed(2) }}
+                            </p>
+                        </td>
+                        <td class="p-6 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <BaseButton variant="ghost" size="icon" @click="viewDetail(inv)" title="Ver Detalle"><Eye class="w-5 h-5" /></BaseButton>
+                                <BaseButton variant="ghost" size="icon" @click="reprintTicket(inv)" title="Reimprimir Ticket"><Printer class="w-5 h-5" /></BaseButton>
+                                <BaseButton variant="ghost" size="icon" @click="exportVerifactu(inv)" title="Exportar Veri*Factu JSON"><Download class="w-5 h-5 text-primary" /></BaseButton>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-      <div v-else v-for="inv in filteredInvoices" :key="inv.id" class="group relative">
-        <BaseCard padding="none" class="p-5 flex flex-wrap items-center justify-between gap-6 hover:border-primary/50">
-          <div class="flex items-center gap-4">
-            <div 
-              class="w-14 h-14 rounded-2xl flex items-center justify-center" 
-              :class="inv.type === 'in' ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-500'"
-            >
-              <TrendingDown v-if="inv.type === 'in'" class="w-7 h-7" />
-              <TrendingUp v-else class="w-7 h-7" />
+    <!-- DETAIL MODAL -->
+    <div v-if="isDetailModalOpen" class="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+        <div class="bg-card w-full max-w-2xl rounded-[3rem] border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <!-- Modal Header -->
+            <div class="p-8 border-b border-border flex items-center justify-between bg-accent/5">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center">
+                        <Receipt class="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black tracking-tighter">Factura {{ selectedInvoice.series }}-{{ selectedInvoice.invoiceNumber }}</h3>
+                        <p class="text-xs font-bold text-foreground/40">{{ formatDate(selectedInvoice.createdAt) }}</p>
+                    </div>
+                </div>
+                <button @click="isDetailModalOpen = false" class="p-3 hover:bg-accent/50 rounded-2xl transition-colors">
+                    <X class="w-6 h-6" />
+                </button>
             </div>
-            <div>
-              <p class="text-[10px] font-black text-foreground/20 font-mono tracking-widest uppercase">REF: {{ inv.invoiceNumber }}</p>
-              <h4 class="font-black text-lg text-foreground uppercase tracking-tight">{{ inv.clientName }}</h4>
-            </div>
-          </div>
 
-          <div class="hidden md:flex items-center gap-10">
-            <div class="flex flex-col">
-              <span class="text-[9px] font-black text-foreground/20 uppercase tracking-widest">Fecha Registro</span>
-              <div class="flex items-center gap-2 text-foreground/50 font-bold text-xs uppercase">
-                <Calendar class="w-3 h-3" /> {{ formatDate(inv.createdAt) }}
-              </div>
-            </div>
-            <BaseBadge :variant="getStatusVariant(inv.status)">
-              {{ getStatusLabel(inv.status) }}
-            </BaseBadge>
-          </div>
+            <!-- Modal Content -->
+            <div class="p-8 space-y-8 max-h-[70vh] overflow-y-auto no-scrollbar">
+                <!-- Status & Fiscal Info -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-5 bg-accent/10 rounded-3xl border border-border">
+                        <p class="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-2">Estado Fiscal AEAT</p>
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                            <span class="font-black text-sm uppercase">Veri*Factu Compliant</span>
+                        </div>
+                    </div>
+                    <div class="p-5 bg-accent/10 rounded-3xl border border-border">
+                        <p class="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-2">Método de Pago</p>
+                        <div class="flex items-center gap-2 font-black text-sm uppercase">
+                            <CreditCard v-if="selectedInvoice.paymentMethod === 'card'" class="w-4 h-4 text-primary" />
+                            <Banknote v-else class="w-4 h-4 text-emerald-500" />
+                            {{ selectedInvoice.paymentMethod === 'card' ? 'Tarjeta' : 'Efectivo' }}
+                        </div>
+                    </div>
+                </div>
 
-          <div class="flex items-center gap-6 ml-auto">
-            <p class="text-3xl font-black tracking-tighter" :class="inv.type === 'in' ? 'text-foreground/40' : 'text-primary'">
-              {{ inv.type === 'in' ? '-' : '' }}${{ Number(inv.amount).toFixed(2) }}
-            </p>
-            <div class="flex items-center gap-2">
-              <BaseButton variant="secondary" size="icon"><Eye class="w-5 h-5" /></BaseButton>
-              <BaseButton variant="secondary" size="icon"><Download class="w-5 h-5" /></BaseButton>
+                <!-- Product List -->
+                <div class="space-y-4">
+                    <h5 class="text-xs font-black uppercase tracking-[0.2em] text-foreground/20 ml-2">Detalle de Líneas</h5>
+                    <div v-if="isLoadingDetail" class="py-10 flex flex-col items-center gap-3 text-foreground/20 italic">
+                        <Loader2 class="w-8 h-8 animate-spin" />
+                        <span>Recuperando detalles inalterables...</span>
+                    </div>
+                    <div v-else class="space-y-2">
+                        <div v-for="item in selectedInvoice.items" :key="item.id" class="flex items-center justify-between p-4 bg-accent/5 rounded-2xl border border-transparent hover:border-primary/20 transition-all">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-sm">{{ item.productName }}</span>
+                                <span class="text-[10px] font-bold text-foreground/30">{{ item.quantity }} ud. x {{ companySettings.currency || '€' }}{{ item.price.toFixed(2) }}</span>
+                            </div>
+                            <span class="font-black text-base">{{ companySettings.currency || '€' }}{{ item.total.toFixed(2) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fiscal Summary -->
+                <div class="p-6 bg-primary text-white rounded-[2rem] shadow-xl shadow-primary/20 flex flex-col gap-3">
+                    <div class="flex justify-between text-xs font-bold opacity-70 uppercase tracking-widest">
+                        <span>Base Imponible</span>
+                        <span>{{ companySettings.currency || '€' }}{{ Number(selectedInvoice.taxableBase).toFixed(2) }}</span>
+                    </div>
+                    <div class="flex justify-between text-xs font-bold opacity-70 uppercase tracking-widest">
+                        <span>IVA ({{ selectedInvoice.vatRate }}%)</span>
+                        <span>{{ companySettings.currency || '€' }}{{ Number(selectedInvoice.vatAmount).toFixed(2) }}</span>
+                    </div>
+                    <div class="h-px bg-white/20 my-1"></div>
+                    <div class="flex justify-between items-end">
+                        <span class="text-sm font-black uppercase tracking-widest">Total Facturado</span>
+                        <span class="text-3xl font-black">{{ companySettings.currency || '€' }}{{ Number(selectedInvoice.amount).toFixed(2) }}</span>
+                    </div>
+                </div>
+
+                <!-- Hash Chain Info -->
+                <div class="p-6 bg-accent/20 rounded-3xl border-2 border-dashed border-border flex flex-col items-center text-center gap-2">
+                    <FileJson class="w-8 h-8 text-foreground/20" />
+                    <p class="text-[10px] font-black text-foreground/40 uppercase tracking-widest leading-tight">Huella Digital (Encadenamiento Veri*Factu)</p>
+                    <code class="text-[9px] font-bold text-primary break-all bg-card px-3 py-1.5 rounded-lg border border-border">{{ selectedInvoice.hash || 'NO_HASH_AVAILABLE' }}</code>
+                </div>
             </div>
-          </div>
-        </BaseCard>
-      </div>
+
+            <!-- Modal Footer -->
+            <div class="p-6 bg-accent/5 border-t border-border flex gap-3">
+                <BaseButton variant="secondary" class="flex-1 py-4" @click="reprintTicket(selectedInvoice)">
+                    <template #icon-left><Printer class="w-5 h-5" /></template>
+                    Reimprimir Ticket
+                </BaseButton>
+                <BaseButton variant="primary" class="flex-1 py-4" @click="exportVerifactu(selectedInvoice)">
+                    <template #icon-left><Download class="w-5 h-5" /></template>
+                    Exportar JSON AEAT
+                </BaseButton>
+            </div>
+        </div>
     </div>
   </div>
 </template>

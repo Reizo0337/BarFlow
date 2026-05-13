@@ -13,6 +13,8 @@ import { ShiftsModule } from './shifts/shifts.module';
 import { TablesModule } from './tables/tables.module';
 import { AiModule } from './ai/ai.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { FiscalModule } from './fiscal/fiscal.module';
+import { ClientsModule } from './clients/clients.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
     TablesModule,
     AiModule,
     AuditLogsModule,
+    FiscalModule,
+    ClientsModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService],
