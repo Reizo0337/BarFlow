@@ -54,15 +54,15 @@ let InvoicesService = class InvoicesService {
         const series = createInvoiceDto.series || 'A';
         const terminalId = createInvoiceDto.terminalId || 'T01';
         const lastInvoice = await this.invoiceRepository.findOne({
-            where: { company: { id: companyId }, series },
+            where: { company: { id: companyId }, series: series },
             order: { invoiceNumber: 'DESC' }
         });
-        let nextNum = lastInvoice ? (parseInt(lastInvoice.invoiceNumber.replace(/\D/g, '')) || 0) + 1 : 1;
-        if (nextNum > 1000000000) {
-            const actualCount = await this.invoiceRepository.count({
-                where: { company: { id: companyId }, series }
-            });
-            nextNum = actualCount + 1;
+        let nextNum = company.nextInvoiceNumber || 1;
+        if (lastInvoice) {
+            const parsed = parseInt(lastInvoice.invoiceNumber);
+            if (!isNaN(parsed)) {
+                nextNum = Math.max(nextNum, parsed + 1);
+            }
         }
         const formattedNumber = nextNum.toString().padStart(6, '0');
         const taxableBase = createInvoiceDto.taxableBase ?? (createInvoiceDto.amount / 1.1);
@@ -101,11 +101,16 @@ let InvoicesService = class InvoicesService {
             }))
         });
         const savedInvoice = await this.invoiceRepository.save(invoice);
-        await this.auditLogsService.log({ id: user.userId || user.id }, company, 'FISCAL_RECORD_CREATED', {
-            invoiceId: savedInvoice.id,
-            invoiceNumber: `${series}-${formattedNumber}`,
-            hash: savedInvoice.hash
-        }, `Registro fiscal generado y encadenado correctamente.`);
+        try {
+            await this.auditLogsService.log({ id: user.userId || user.id }, company, 'FISCAL_RECORD_CREATED', {
+                invoiceId: savedInvoice.id,
+                invoiceNumber: `${series}-${formattedNumber}`,
+                hash: savedInvoice.hash
+            }, `Registro fiscal generado y encadenado correctamente.`);
+        }
+        catch (error) {
+            console.error('Error creating audit log:', error);
+        }
         if (!isNaN(nextNum)) {
             await this.companyRepository.update(companyId, { nextInvoiceNumber: nextNum + 1 });
         }
@@ -130,64 +135,115 @@ let InvoicesService = class InvoicesService {
         throw new Error('VIOLACIÓN LEY 11/2021: La eliminación física de registros de facturación está prohibida. Use facturas rectificativas para anular operaciones.');
     }
     async getClosingStats(companyId) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
         const invoices = await this.invoiceRepository.find({
             where: {
                 company: { id: companyId },
-                createdAt: (0, typeorm_2.Between)(today, tomorrow),
+                closing: (0, typeorm_2.IsNull)(),
                 type: 'sale'
-            }
+            },
+            relations: ['items']
+        });
+        const itemizedMap = {};
+        const vatMap = {};
+        invoices.forEach(inv => {
+            const rateKey = `${inv.vatRate}%`;
+            vatMap[rateKey] = (vatMap[rateKey] || 0) + Number(inv.vatAmount);
+            inv.items?.forEach(item => {
+                if (!itemizedMap[item.productName])
+                    itemizedMap[item.productName] = { quantity: 0, total: 0 };
+                itemizedMap[item.productName].quantity += Number(item.quantity);
+                itemizedMap[item.productName].total += Number(item.total);
+            });
         });
         return {
-            totalAmount: invoices.reduce((s, i) => s + i.amount, 0),
+            totalAmount: invoices.reduce((s, i) => s + Number(i.amount), 0),
             totalSalesCount: invoices.length,
-            cashTotal: invoices.filter(inv => inv.paymentMethod === 'cash').reduce((s, i) => s + i.amount, 0),
-            cardTotal: invoices.filter(inv => inv.paymentMethod === 'card').reduce((s, i) => s + i.amount, 0),
-            topProducts: [],
+            cashTotal: invoices.filter(inv => inv.paymentMethod === 'cash').reduce((s, i) => s + Number(i.amount), 0),
+            cardTotal: invoices.filter(inv => inv.paymentMethod === 'card').reduce((s, i) => s + Number(i.amount), 0),
+            vatBreakdown: vatMap,
+            topProducts: Object.entries(itemizedMap)
+                .map(([name, data]) => ({ name, ...data }))
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 5),
             lowStockItems: []
         };
     }
     async performDailyClosing(companyId, user, actualCash) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
         const invoices = await this.invoiceRepository.find({
             where: {
                 company: { id: companyId },
-                createdAt: (0, typeorm_2.Between)(today, tomorrow),
+                closing: (0, typeorm_2.IsNull)(),
                 type: 'sale'
             },
+            relations: ['items'],
             order: { createdAt: 'ASC' }
         });
         if (invoices.length === 0)
-            throw new Error('No hay ventas registradas para hoy.');
-        const totalAmount = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-        const totalVat = invoices.reduce((sum, inv) => sum + inv.vatAmount, 0);
+            throw new Error('No hay ventas pendientes de cierre en este momento.');
+        const itemizedMap = {};
+        const vatMap = {};
+        let totalAmount = 0;
+        let totalVat = 0;
+        let expectedCash = 0;
+        let expectedCard = 0;
+        invoices.forEach(inv => {
+            totalAmount += Number(inv.amount);
+            totalVat += Number(inv.vatAmount);
+            if (inv.paymentMethod === 'cash')
+                expectedCash += Number(inv.amount);
+            if (inv.paymentMethod === 'card')
+                expectedCard += Number(inv.amount);
+            const rateKey = `${inv.vatRate}%`;
+            if (!vatMap[rateKey])
+                vatMap[rateKey] = { base: 0, vat: 0 };
+            vatMap[rateKey].base += Number(inv.taxableBase);
+            vatMap[rateKey].vat += Number(inv.vatAmount);
+            inv.items?.forEach(item => {
+                if (!itemizedMap[item.productName]) {
+                    itemizedMap[item.productName] = { quantity: 0, total: 0, vat: 0 };
+                }
+                itemizedMap[item.productName].quantity += Number(item.quantity);
+                itemizedMap[item.productName].total += Number(item.total);
+                const itemVat = item.total * (inv.vatRate / 100);
+                itemizedMap[item.productName].vat += itemVat;
+            });
+        });
         const lastClosing = await this.dailyClosingRepository.findOne({
             where: { company: { id: companyId } },
             order: { closingNumber: 'DESC' }
         });
         const nextClosingNumber = lastClosing ? lastClosing.closingNumber + 1 : 1;
+        const previousHash = lastClosing?.hash || '0'.repeat(64);
+        const hash = require('crypto')
+            .createHash('sha256')
+            .update(`${companyId}-${nextClosingNumber}-${totalAmount}-${previousHash}`)
+            .digest('hex');
         const closing = this.dailyClosingRepository.create({
             company: { id: companyId },
-            user,
+            user: { id: user.userId || user.id },
             closingNumber: nextClosingNumber,
             firstInvoiceNumber: invoices[0].invoiceNumber,
             lastInvoiceNumber: invoices[invoices.length - 1].invoiceNumber,
+            terminalId: invoices[0].terminalId || 'T01',
             totalAmount,
             totalVat,
-            expectedCash: invoices.filter(inv => inv.paymentMethod === 'cash').reduce((s, i) => s + i.amount, 0),
+            expectedCash,
             actualCash,
-            expectedCard: invoices.filter(inv => inv.paymentMethod === 'card').reduce((s, i) => s + i.amount, 0),
+            expectedCard,
             totalSalesCount: invoices.length,
-            vatBreakdown: JSON.stringify({ '10%': totalVat }),
-            itemizedSales: JSON.stringify([])
+            vatBreakdown: JSON.stringify(vatMap),
+            itemizedSales: JSON.stringify(Object.entries(itemizedMap).map(([name, data]) => ({
+                name,
+                ...data
+            }))),
+            previousHash,
+            hash
         });
-        return await this.dailyClosingRepository.save(closing);
+        const savedClosing = await this.dailyClosingRepository.save(closing);
+        if (invoices.length > 0) {
+            await this.invoiceRepository.update(invoices.map(inv => inv.id), { closing: savedClosing });
+        }
+        return savedClosing;
     }
     async getClosingHistory(companyId) {
         return await this.dailyClosingRepository.find({

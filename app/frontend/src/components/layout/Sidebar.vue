@@ -39,7 +39,6 @@ const isExpanded = computed(() => !uiStore.isSidebarCollapsed)
                 class="flex items-center transition-all duration-300 overflow-hidden"
                 :class="isExpanded ? 'gap-3' : 'justify-center'"
             >
-                <Layers class="w-7 h-7 text-primary" />
                 <h1 
                     v-if="isExpanded"
                     class="text-lg font-black text-foreground tracking-tighter uppercase whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300"

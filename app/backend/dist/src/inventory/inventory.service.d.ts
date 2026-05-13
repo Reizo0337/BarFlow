@@ -25,6 +25,7 @@ export declare class InventoryService {
     }): Promise<number>;
     remove(id: number, companyId: number): Promise<void>;
     findByName(name: string, companyId: number): Promise<Product | null>;
-    updateStockDelta(id: number, delta: number, companyId: number): Promise<Product | null>;
+    updateStock(id: number, delta: number, companyId: number): Promise<Product | null>;
     findGlobalByName(name: string): Promise<Product | null>;
+    applyTemplate(template: any[], companyId: number): Promise<void>;
 }

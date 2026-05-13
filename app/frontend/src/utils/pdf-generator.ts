@@ -132,13 +132,30 @@ export const generateTicketPDF = async (invoice: any, cart: any[], settings: any
 export const generateClosingPDF = (closing: any, settings: any, type: 'simple' | 'detailed' = 'simple') => {
     const doc = new jsPDF({
         unit: 'mm',
-        format: [80, type === 'simple' ? 150 : 250]
+        format: [80, type === 'simple' ? 200 : 297] // A4 height for detailed
     })
 
     const margin = 5
     let cursorY = 10
 
-    // Header
+    // Header: Company Info (Fiscal Requirement)
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.text(settings.legalName || 'BARFLOW POS', 40, cursorY, { align: 'center' })
+    cursorY += 5
+
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
+    if (settings.nif) {
+        doc.text(`NIF: ${settings.nif}`, 40, cursorY, { align: 'center' })
+        cursorY += 4
+    }
+    if (settings.address) {
+        doc.text(settings.address, 40, cursorY, { align: 'center', maxWidth: 70 })
+        cursorY += 4
+    }
+
+    cursorY += 2
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
     doc.text('CIERRE DE CAJA (Z)', 40, cursorY, { align: 'center' })
@@ -147,13 +164,16 @@ export const generateClosingPDF = (closing: any, settings: any, type: 'simple' |
     doc.text(`Z-Nº: ${closing.closingNumber}`, 40, cursorY, { align: 'center' })
     cursorY += 7
 
+    // Operation Info
     doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
-    doc.text(`Establecimiento: ${settings.legalName || 'BarFlow POS'}`, margin, cursorY)
-    cursorY += 4
-    doc.text(`Fecha: ${new Date(closing.timestamp).toLocaleString()}`, margin, cursorY)
+    doc.text(`Fecha/Hora: ${new Date(closing.timestamp).toLocaleString()}`, margin, cursorY)
     cursorY += 4
     doc.text(`Responsable: ${closing.user?.name || 'N/A'}`, margin, cursorY)
+    cursorY += 4
+    doc.text(`Terminal: ${closing.terminalId || 'T01'}`, margin, cursorY)
+    cursorY += 4
+    doc.text(`Tickets: ${closing.firstInvoiceNumber} - ${closing.lastInvoiceNumber}`, margin, cursorY)
     cursorY += 6
 
     doc.line(margin, cursorY, 75, cursorY)
@@ -161,30 +181,50 @@ export const generateClosingPDF = (closing: any, settings: any, type: 'simple' |
 
     // Totals Section
     doc.setFont('helvetica', 'bold')
-    doc.text('RESUMEN DE CAJA', margin, cursorY)
+    doc.text('RESUMEN ECONÓMICO', margin, cursorY)
     cursorY += 5
     doc.setFont('helvetica', 'normal')
 
-    const rows = [
-        ['Efectivo (Esperado):', `EUR ${closing.expectedCash.toFixed(2)}`],
-        ['Efectivo (Real):', `EUR ${closing.actualCash.toFixed(2)}`],
-        ['Tarjeta:', `EUR ${closing.expectedCard.toFixed(2)}`],
-        ['', ''],
-        ['TOTAL RECAUDADO:', `EUR ${closing.totalAmount.toFixed(2)}`]
+    const economics = [
+        ['Total Bruto:', `EUR ${Number(closing.totalAmount).toFixed(2)}`],
+        ['Total IVA:', `EUR ${Number(closing.totalVat).toFixed(2)}`],
+        ['Total Neto:', `EUR ${(Number(closing.totalAmount) - Number(closing.totalVat)).toFixed(2)}`]
     ]
 
-    rows.forEach(row => {
+    economics.forEach(row => {
         doc.text(row[0], margin, cursorY)
         doc.text(row[1], 75, cursorY, { align: 'right' })
         cursorY += 4
     })
 
-    const discrepancy = closing.actualCash - closing.expectedCash
+    cursorY += 4
+    doc.line(margin, cursorY, 75, cursorY)
+    cursorY += 5
+
+    // Payment Methods
+    doc.setFont('helvetica', 'bold')
+    doc.text('MÉTODOS DE PAGO', margin, cursorY)
+    cursorY += 5
+    doc.setFont('helvetica', 'normal')
+
+    const payments = [
+        ['Efectivo (Esperado):', `EUR ${Number(closing.expectedCash).toFixed(2)}`],
+        ['Efectivo (Real):', `EUR ${Number(closing.actualCash).toFixed(2)}`],
+        ['Tarjeta:', `EUR ${Number(closing.expectedCard).toFixed(2)}`]
+    ]
+
+    payments.forEach(row => {
+        doc.text(row[0], margin, cursorY)
+        doc.text(row[1], 75, cursorY, { align: 'right' })
+        cursorY += 4
+    })
+
+    const discrepancy = Number(closing.actualCash) - Number(closing.expectedCash)
     if (discrepancy !== 0) {
         cursorY += 2
         doc.setFont('helvetica', 'bold')
-        doc.setTextColor(discrepancy < 0 ? 200 : 0, 0, 0)
-        doc.text('DESCUADRE:', margin, cursorY)
+        doc.setTextColor(discrepancy < 0 ? 200 : 0, 100, 0)
+        doc.text('DIFERENCIA CAJA:', margin, cursorY)
         doc.text(`EUR ${discrepancy.toFixed(2)}`, 75, cursorY, { align: 'right' })
         doc.setTextColor(0, 0, 0)
         cursorY += 4
@@ -194,30 +234,66 @@ export const generateClosingPDF = (closing: any, settings: any, type: 'simple' |
     doc.line(margin, cursorY, 75, cursorY)
     cursorY += 6
 
-    // Detailed Section (Products)
-    if (type === 'detailed' && closing.itemizedSales) {
-        const items = JSON.parse(closing.itemizedSales)
-        if (items.length > 0) {
+    // VAT Breakdown Table (Fiscal Requirement)
+    if (closing.vatBreakdown) {
+        try {
+            const vatData = JSON.parse(closing.vatBreakdown)
             doc.setFont('helvetica', 'bold')
-            doc.text('DESGLOSE DE PRODUCTOS', margin, cursorY)
-            cursorY += 5
+            doc.text('DESGLOSE IVA', margin, cursorY)
+            cursorY += 4
 
             autoTable(doc, {
                 startY: cursorY,
-                head: [['Prod.', 'Ud.', 'Total']],
-                body: items.map((i: any) => [i.name, i.quantity, `${i.total.toFixed(2)}`]),
+                head: [['Tipo', 'Base', 'Cuota']],
+                body: Object.entries(vatData).map(([rate, data]: [string, any]) => [
+                    rate,
+                    data.base.toFixed(2),
+                    data.vat.toFixed(2)
+                ]),
                 theme: 'plain',
                 styles: { fontSize: 6, cellPadding: 1 },
+                columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
                 margin: { left: margin, right: margin }
             })
-            cursorY = (doc as any).lastAutoTable.finalY + 10
-        }
+            cursorY = (doc as any).lastAutoTable.finalY + 8
+        } catch (e) { console.error('Error parsing VAT breakdown:', e) }
     }
 
-    // Legal Info
+    // Detailed Section (Products)
+    if (type === 'detailed' && closing.itemizedSales) {
+        try {
+            const items = JSON.parse(closing.itemizedSales)
+            if (items.length > 0) {
+                doc.setFont('helvetica', 'bold')
+                doc.text('DESGLOSE POR PRODUCTO', margin, cursorY)
+                cursorY += 4
+
+                autoTable(doc, {
+                    startY: cursorY,
+                    head: [['Producto', 'Cant.', 'Total']],
+                    body: items.map((i: any) => [
+                        i.name.length > 20 ? i.name.substring(0, 18) + '..' : i.name,
+                        i.quantity, 
+                        `${Number(i.total).toFixed(2)}`
+                    ]),
+                    theme: 'plain',
+                    styles: { fontSize: 6, cellPadding: 1 },
+                    columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' } },
+                    margin: { left: margin, right: margin }
+                })
+                cursorY = (doc as any).lastAutoTable.finalY + 10
+            }
+        } catch (e) { console.error('Error parsing itemized sales:', e) }
+    }
+
+    // Legal Info & Chaining
     doc.setFontSize(6)
     doc.setFont('helvetica', 'italic')
-    doc.text('Registro de cierre inalterable - Veri*Factu Compliant', 40, cursorY, { align: 'center' })
+    doc.text('SISTEMA VERI*FACTU - LEY 11/2021', 40, cursorY, { align: 'center' })
+    cursorY += 3
+    doc.text('Este documento es un registro fiscal inalterable.', 40, cursorY, { align: 'center' })
+    cursorY += 3
+    doc.text(`Hash: ${closing.hash ? closing.hash.substring(0, 32).toUpperCase() : 'N/A'}`, 40, cursorY, { align: 'center' })
 
     doc.save(`Cierre_Z_${closing.closingNumber}.pdf`)
 }

@@ -30,7 +30,7 @@ export const useInventoryStore = defineStore('inventory', () => {
                 api.get('/inventory'),
                 api.get('/inventory/categories')
             ])
-            
+
             products.value = prodRes.data
             categories.value = catRes.data
         } catch (error) {
@@ -40,9 +40,9 @@ export const useInventoryStore = defineStore('inventory', () => {
         }
     }
 
-    const updateStock = async (id: number, newStock: number) => {
+    const updateStock = async (id: number, delta: number) => {
         try {
-            await api.patch(`/inventory/${id}`, { stock: newStock })
+            await api.patch(`/inventory/${id}/stock`, { delta })
             await fetchProducts()
         } catch (error) {
             console.error('Error updating stock:', error)

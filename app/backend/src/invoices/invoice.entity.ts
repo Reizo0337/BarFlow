@@ -86,4 +86,7 @@ export class Invoice {
 
     @ManyToOne(() => Client, (client) => client.invoices, { nullable: true })
     client: Client;
+
+    @ManyToOne('DailyClosing', { nullable: true })
+    closing: any; // Using string to avoid circular dependency
 }

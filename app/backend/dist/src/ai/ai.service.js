@@ -161,7 +161,7 @@ EJEMPLO DE SALIDA:
                         return { ...action, status: 'success', result: updatedStock };
                     }
                     else {
-                        const updatedStock = await this.inventoryService.updateStockDelta(product.id, delta, companyId);
+                        const updatedStock = await this.inventoryService.updateStock(product.id, delta, companyId);
                         return { ...action, status: 'success', result: updatedStock };
                     }
                 case 'update_price':

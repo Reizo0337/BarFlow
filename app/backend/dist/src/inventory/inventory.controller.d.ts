@@ -12,6 +12,9 @@ export declare class InventoryController {
     create(createProductDto: CreateProductDto, req: any): Promise<import("./product.entity").Product>;
     update(id: string, updateProductDto: UpdateProductDto, req: any): Promise<import("./product.entity").Product | null>;
     remove(id: string, req: any): Promise<void>;
+    updateStock(id: string, body: {
+        delta: number;
+    }, req: any): Promise<import("./product.entity").Product | null>;
     createCategory(body: {
         name: string;
     }, req: any): Promise<import("./category.entity").Category>;

@@ -22,7 +22,12 @@ export declare class InvoicesService {
         totalSalesCount: number;
         cashTotal: number;
         cardTotal: number;
-        topProducts: never[];
+        vatBreakdown: Record<string, number>;
+        topProducts: {
+            quantity: number;
+            total: number;
+            name: string;
+        }[];
         lowStockItems: never[];
     }>;
     performDailyClosing(companyId: number, user: any, actualCash: number): Promise<DailyClosing>;

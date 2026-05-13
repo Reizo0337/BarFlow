@@ -72,6 +72,11 @@ export class InventoryController {
         return this.inventoryService.remove(+id, req.user.companyId);
     }
 
+    @Patch(':id/stock')
+    updateStock(@Param('id') id: string, @Body() body: { delta: number }, @Request() req) {
+        return this.inventoryService.updateStock(+id, body.delta, req.user.companyId);
+    }
+
     @Post('categories')
     createCategory(@Body() body: { name: string }, @Request() req) {
         return this.inventoryService.createCategory(body.name, req.user.companyId);

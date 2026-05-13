@@ -49,6 +49,9 @@ let InventoryController = class InventoryController {
     remove(id, req) {
         return this.inventoryService.remove(+id, req.user.companyId);
     }
+    updateStock(id, body, req) {
+        return this.inventoryService.updateStock(+id, body.delta, req.user.companyId);
+    }
     createCategory(body, req) {
         return this.inventoryService.createCategory(body.name, req.user.companyId);
     }
@@ -135,6 +138,15 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], InventoryController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Patch)(':id/stock'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", void 0)
+], InventoryController.prototype, "updateStock", null);
 __decorate([
     (0, common_1.Post)('categories'),
     __param(0, (0, common_1.Body)()),

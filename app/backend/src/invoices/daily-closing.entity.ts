@@ -20,6 +20,15 @@ export class DailyClosing {
     @Column()
     lastInvoiceNumber: string;
 
+    @Column({ default: 'T01' })
+    terminalId: string;
+
+    @Column({ nullable: true })
+    previousHash: string;
+
+    @Column({ nullable: true })
+    hash: string;
+
     @Column('decimal', { 
         precision: 10, 
         scale: 2,

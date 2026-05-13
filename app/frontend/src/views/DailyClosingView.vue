@@ -99,6 +99,10 @@ const handleClosing = async () => {
             isClosing.value = true
             try {
                 const response = await api.post('/invoices/daily-closing', { actualCash: actualCash.value })
+                
+                // Refresh local state immediately
+                await Promise.all([fetchStats(), fetchHistory()])
+                
                 dialog.value.isOpen = false
                 
                 // Automatically download simple ticket
@@ -111,7 +115,10 @@ const handleClosing = async () => {
                         title: 'Cierre Completado',
                         message: 'El cierre de caja se ha realizado correctamente. Se ha descargado el ticket Z.',
                         type: 'success',
-                        onConfirm: () => router.push('/app')
+                        onConfirm: () => {
+                            dialog.value.isOpen = false
+                            activeTab.value = 'history' // Switch to history to show the new record
+                        }
                     }
                 }, 500)
             } catch (error: any) {
@@ -247,12 +254,13 @@ const handleClosing = async () => {
                     
                     <button 
                         @click="handleClosing"
-                        :disabled="isClosing"
-                        class="w-full bg-white text-primary py-5 rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3"
+                        :disabled="isClosing || !stats?.totalSalesCount"
+                        class="w-full bg-white text-primary py-5 rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed"
                     >
                         <Loader2 v-if="isClosing" class="w-6 h-6 animate-spin" />
                         <template v-else>
-                            Realizar Cierre Z <CheckCircle2 class="w-6 h-6" />
+                            {{ !stats?.totalSalesCount ? 'Sin Ventas Pendientes' : 'Realizar Cierre Z' }} 
+                            <CheckCircle2 v-if="stats?.totalSalesCount" class="w-6 h-6" />
                         </template>
                     </button>
                 </div>
@@ -261,19 +269,36 @@ const handleClosing = async () => {
                 <div class="bg-card rounded-[2.5rem] border border-border p-6 space-y-6">
                     <div class="flex items-center gap-3">
                         <TrendingUp class="w-5 h-5 text-primary" />
-                        <h3 class="font-black text-sm uppercase tracking-widest">Estadísticas Hoy</h3>
+                        <h3 class="font-black text-sm uppercase tracking-widest">Desglose Fiscal (IVA)</h3>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div v-for="(amount, rate) in stats?.vatBreakdown" :key="rate" class="flex items-center justify-between p-3 bg-accent/10 rounded-xl">
+                            <span class="font-bold text-sm">Cuota {{ rate }}</span>
+                            <span class="font-black text-primary">€{{ amount.toFixed(2) }}</span>
+                        </div>
+                        <div v-if="!stats?.vatBreakdown || Object.keys(stats.vatBreakdown).length === 0" class="py-4 text-center text-foreground/30 italic text-sm">
+                            Sin datos de impuestos
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 pt-4 border-t border-border">
+                        <ReceiptText class="w-5 h-5 text-primary" />
+                        <h3 class="font-black text-sm uppercase tracking-widest">Top Productos Hoy</h3>
                     </div>
 
                     <div class="space-y-4">
                         <div v-if="stats?.topProducts?.length" class="space-y-3">
-                            <p class="text-[10px] font-black text-foreground/30 uppercase tracking-widest">Top 3 Productos</p>
                             <div v-for="(p, i) in stats.topProducts" :key="i" class="flex items-center justify-between p-3 bg-accent/10 rounded-xl">
-                                <span class="font-bold text-sm">{{ p.name }}</span>
-                                <span class="font-black text-primary">{{ p.quantity }} ud.</span>
+                                <div class="flex flex-col">
+                                    <span class="font-bold text-sm">{{ p.name }}</span>
+                                    <span class="text-[10px] text-foreground/40 font-black uppercase">{{ p.quantity }} unidades</span>
+                                </div>
+                                <span class="font-black text-primary">€{{ p.total.toFixed(2) }}</span>
                             </div>
                         </div>
-                        <div v-else class="py-10 text-center text-foreground/30 italic text-sm">
-                            No hay datos suficientes
+                        <div v-else class="py-6 text-center text-foreground/30 italic text-sm">
+                            No hay ventas registradas
                         </div>
                     </div>
                 </div>

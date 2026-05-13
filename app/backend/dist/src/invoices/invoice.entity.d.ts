@@ -22,4 +22,5 @@ export declare class Invoice {
     company: Company;
     items: InvoiceItem[];
     client: Client;
+    closing: any;
 }

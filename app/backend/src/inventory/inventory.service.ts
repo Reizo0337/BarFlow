@@ -107,7 +107,9 @@ export class InventoryService {
             updateProductDto.image = await this.fileService.downloadAndSaveImage(updateProductDto.image, this.uploadDir);
         }
 
-        await this.productRepository.update(id, updateProductDto);
+        if (Object.keys(updateProductDto).length > 0) {
+            await this.productRepository.update(id, updateProductDto);
+        }
         return this.findOne(id, companyId);
     }
 
@@ -149,7 +151,7 @@ export class InventoryService {
             .getOne();
     }
 
-    async updateStockDelta(id: number, delta: number, companyId: number): Promise<Product | null> {
+    async updateStock(id: number, delta: number, companyId: number): Promise<Product | null> {
         const product = await this.findOne(id, companyId);
         if (!product) return null;
         product.stock = Math.max(0, product.stock + delta);
@@ -162,5 +164,15 @@ export class InventoryService {
             .andWhere('product.image IS NOT NULL')
             .andWhere('product.image != ""')
             .getOne();
+    }
+
+    async applyTemplate(template: any[], companyId: number): Promise<void> {
+        // 1. Delete all existing products for this company
+        await this.productRepository.delete({ company: { id: companyId } as any });
+
+        // 2. Iterate and create each product from template
+        for (const item of template) {
+            await this.create(item, companyId);
+        }
     }
 }

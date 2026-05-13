@@ -73,7 +73,9 @@ export class UsersService {
             data.pin = await bcrypt.hash(data.pin, 10);
         }
 
-        await this.usersRepository.update(id, data);
+        if (Object.keys(data).length > 0) {
+            await this.usersRepository.update(id, data);
+        }
         return this.findOneFiltered(id, companyId);
     }
 

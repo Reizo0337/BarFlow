@@ -8,7 +8,7 @@ export class ClientsService {
     constructor(
         @InjectRepository(Client)
         private clientsRepository: Repository<Client>,
-    ) {}
+    ) { }
 
     findAll(companyId: number) {
         return this.clientsRepository.find({
@@ -33,7 +33,9 @@ export class ClientsService {
     }
 
     async update(id: number, data: Partial<Client>, companyId: number) {
-        await this.clientsRepository.update({ id, company: { id: companyId } }, data);
+        if (Object.keys(data).length > 0) {
+            await this.clientsRepository.update({ id, company: { id: companyId } }, data);
+        }
         return this.findOne(id, companyId);
     }
 

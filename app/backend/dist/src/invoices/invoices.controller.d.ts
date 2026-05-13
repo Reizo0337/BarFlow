@@ -10,7 +10,12 @@ export declare class InvoicesController {
         totalSalesCount: number;
         cashTotal: number;
         cardTotal: number;
-        topProducts: never[];
+        vatBreakdown: Record<string, number>;
+        topProducts: {
+            quantity: number;
+            total: number;
+            name: string;
+        }[];
         lowStockItems: never[];
     }>;
     getClosingHistory(req: any): Promise<import("./daily-closing.entity").DailyClosing[]>;

@@ -36,6 +36,7 @@ let Invoice = class Invoice {
     company;
     items;
     client;
+    closing;
 };
 exports.Invoice = Invoice;
 __decorate([
@@ -138,6 +139,10 @@ __decorate([
     (0, typeorm_1.ManyToOne)(() => client_entity_1.Client, (client) => client.invoices, { nullable: true }),
     __metadata("design:type", client_entity_1.Client)
 ], Invoice.prototype, "client", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)('DailyClosing', { nullable: true }),
+    __metadata("design:type", Object)
+], Invoice.prototype, "closing", void 0);
 exports.Invoice = Invoice = __decorate([
     (0, typeorm_1.Entity)()
 ], Invoice);

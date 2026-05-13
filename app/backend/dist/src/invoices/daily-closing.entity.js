@@ -20,6 +20,9 @@ let DailyClosing = class DailyClosing {
     closingNumber;
     firstInvoiceNumber;
     lastInvoiceNumber;
+    terminalId;
+    previousHash;
+    hash;
     totalAmount;
     totalVat;
     expectedCash;
@@ -52,6 +55,18 @@ __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
 ], DailyClosing.prototype, "lastInvoiceNumber", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: 'T01' }),
+    __metadata("design:type", String)
+], DailyClosing.prototype, "terminalId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], DailyClosing.prototype, "previousHash", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], DailyClosing.prototype, "hash", void 0);
 __decorate([
     (0, typeorm_1.Column)('decimal', {
         precision: 10,

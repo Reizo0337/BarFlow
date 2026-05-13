@@ -105,7 +105,9 @@ let InventoryService = class InventoryService {
         if (updateProductDto.image && updateProductDto.image.startsWith('http')) {
             updateProductDto.image = await this.fileService.downloadAndSaveImage(updateProductDto.image, this.uploadDir);
         }
-        await this.productRepository.update(id, updateProductDto);
+        if (Object.keys(updateProductDto).length > 0) {
+            await this.productRepository.update(id, updateProductDto);
+        }
         return this.findOne(id, companyId);
     }
     async bulkUpdate(companyId, data) {
@@ -142,7 +144,7 @@ let InventoryService = class InventoryService {
             .andWhere('product.companyId = :companyId', { companyId })
             .getOne();
     }
-    async updateStockDelta(id, delta, companyId) {
+    async updateStock(id, delta, companyId) {
         const product = await this.findOne(id, companyId);
         if (!product)
             return null;
@@ -155,6 +157,12 @@ let InventoryService = class InventoryService {
             .andWhere('product.image IS NOT NULL')
             .andWhere('product.image != ""')
             .getOne();
+    }
+    async applyTemplate(template, companyId) {
+        await this.productRepository.delete({ company: { id: companyId } });
+        for (const item of template) {
+            await this.create(item, companyId);
+        }
     }
 };
 exports.InventoryService = InventoryService;

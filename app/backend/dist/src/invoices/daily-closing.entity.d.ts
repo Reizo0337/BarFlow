@@ -6,6 +6,9 @@ export declare class DailyClosing {
     closingNumber: number;
     firstInvoiceNumber: string;
     lastInvoiceNumber: string;
+    terminalId: string;
+    previousHash: string;
+    hash: string;
     totalAmount: number;
     totalVat: number;
     expectedCash: number;

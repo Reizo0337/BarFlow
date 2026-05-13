@@ -42,7 +42,9 @@ let ClientsService = class ClientsService {
         return this.clientsRepository.save(client);
     }
     async update(id, data, companyId) {
-        await this.clientsRepository.update({ id, company: { id: companyId } }, data);
+        if (Object.keys(data).length > 0) {
+            await this.clientsRepository.update({ id, company: { id: companyId } }, data);
+        }
         return this.findOne(id, companyId);
     }
     async remove(id, companyId) {
