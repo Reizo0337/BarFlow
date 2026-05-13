@@ -1,11 +1,13 @@
 import { InventoryService } from './inventory.service';
 import { CreateProductDto, UpdateProductDto } from './product.dto';
+import { FileService } from '../common/file.service';
 export declare class InventoryController {
     private readonly inventoryService;
-    constructor(inventoryService: InventoryService);
-    uploadFile(file: any): {
+    private readonly fileService;
+    constructor(inventoryService: InventoryService, fileService: FileService);
+    uploadFile(file: any): Promise<{
         url: string;
-    };
+    }>;
     findAll(req: any): Promise<import("./product.entity").Product[]>;
     findAllCategories(req: any): Promise<import("./category.entity").Category[]>;
     findOne(id: string, req: any): Promise<import("./product.entity").Product | null>;
@@ -22,4 +24,5 @@ export declare class InventoryController {
         name: string;
     }, req: any): Promise<import("./category.entity").Category | null>;
     removeCategory(id: string, req: any): Promise<void>;
+    applyTemplate(template: any[], req: any): Promise<void>;
 }

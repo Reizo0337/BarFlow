@@ -11,7 +11,7 @@ import {
 
 interface DialogProps {
     title: string
-    message: string
+    message?: string
     type?: 'info' | 'success' | 'warning' | 'error' | 'confirm'
     confirmText?: string
     cancelText?: string
@@ -20,6 +20,7 @@ interface DialogProps {
 }
 
 const props = withDefaults(defineProps<DialogProps>(), {
+    message: '',
     type: 'info',
     confirmText: 'Aceptar',
     cancelText: 'Cancelar',

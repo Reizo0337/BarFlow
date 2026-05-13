@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Layers, Tag, Plus, Box, Search, Filter } from 'lucide-vue-next'
+import { Layers, Tag, Plus, Box, Search, Filter, Wand2 } from 'lucide-vue-next'
 import { useInventoryStore } from '@/stores/inventory'
+import { INVENTORY_TEMPLATE } from '@/constants/inventory-template'
 
 // UI Kit Components
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
+import AppDialog from '@/components/ui/AppDialog.vue'
 
 // Local Components
 import InventoryAiAssistant from '@/components/inventory/InventoryAiAssistant.vue'
@@ -26,6 +28,10 @@ const showCategoryModal = ref(false)
 const showProductModal = ref(false)
 const editingProduct = ref<any>(null)
 
+// Template Dialog State
+const isApplyingTemplate = ref(false)
+const showTemplateDialog = ref(false)
+
 const openEditModal = (product: any) => {
   editingProduct.value = product
   showProductModal.value = true
@@ -34,6 +40,18 @@ const openEditModal = (product: any) => {
 const openCreateModal = () => {
   editingProduct.value = null
   showProductModal.value = true
+}
+
+const handleApplyTemplate = async () => {
+  isApplyingTemplate.value = true
+  try {
+    await inventoryStore.applyTemplate(INVENTORY_TEMPLATE)
+    showTemplateDialog.value = false
+  } catch (error) {
+    console.error(error)
+  } finally {
+    isApplyingTemplate.value = false
+  }
 }
 
 onMounted(() => {
@@ -60,7 +78,7 @@ const filteredCategories = computed(() => {
 })
 
 const lowStockItemsCount = computed(() => {
-  return inventoryStore.products.filter(item => item.stock <= item.minStock).length
+  return inventoryStore.products.filter(item => item.stock <= (item.minStock || 0)).length
 })
 
 const getProductCountByCategory = (categoryId: number) => {
@@ -70,9 +88,19 @@ const getProductCountByCategory = (categoryId: number) => {
 
 <template>
   <div class="max-w-[1600px] mx-auto space-y-10 p-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-    <!-- Modals -->
+    <!-- Modals & Dialogs -->
     <CategoryModal :is-open="showCategoryModal" @close="showCategoryModal = false" />
     <ProductModal :is-open="showProductModal" :product="editingProduct" @close="showProductModal = false" />
+    <AppDialog 
+      :is-open="showTemplateDialog"
+      title="¿Aplicar plantilla de inventario?"
+      message="Esta acción borrará TODOS los productos y categorías actuales para instalar la configuración predeterminada. ¿Estás seguro de que deseas continuar?"
+      type="confirm"
+      :is-loading="isApplyingTemplate"
+      @confirm="handleApplyTemplate"
+      @close="showTemplateDialog = false"
+      @cancel="showTemplateDialog = false"
+    />
 
     <!-- Hero Header -->
     <div class="relative flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-border/50">
@@ -86,6 +114,10 @@ const getProductCountByCategory = (categoryId: number) => {
       </div>
       
       <div class="flex flex-wrap gap-4">
+        <BaseButton variant="outline" @click="showTemplateDialog = true">
+          <template #icon-left><Wand2 class="w-4 h-4" /></template>
+          Aplicar Plantilla
+        </BaseButton>
         <BaseButton variant="secondary" @click="showCategoryModal = true">
           <template #icon-left><Tag class="w-4 h-4" /></template>
           Categoría

@@ -40,10 +40,11 @@ const router = useRouter()
 const clientsStore = ref<{ clients: any[] }>({ clients: [] })
 
 // --- State ---
-const selectedCategory = ref<string | number>('all')
+const selectedCategory = ref<string | number>('')
 const cart = ref<any[]>([])
 const activeTab = ref<'products' | 'cart'>('products')
 const isProcessing = ref(false)
+const productsLimit = ref(30)
 
 // Dialog State
 const dialog = ref({
@@ -66,6 +67,8 @@ const isSwitching = ref(false)
 const tables = Array.from({ length: 24 }, (_, i) => (i + 1).toString().padStart(2, '0'))
 const currency = ref('€')
 const companySettings = ref<any>({})
+
+// IMAGE CACHE TRACKER is now handled by inventoryStore globally
 
 // --- Data Fetching ---
 const fetchSettings = async () => {
@@ -98,6 +101,8 @@ onMounted(async () => {
     if (tablesStore.pendingOrders[selectedTable.value]) {
         cart.value = [...tablesStore.pendingOrders[selectedTable.value]]
     }
+
+    // PRELOADER REMOVED to avoid CPU congestion during interactions
 })
 
 onUnmounted(() => {
@@ -106,17 +111,30 @@ onUnmounted(() => {
 
 // --- Computed ---
 const dynamicCategories = computed(() => {
-    const base = [{ id: 'all', name: 'Todo' }]
-    const fromBackend = inventoryStore.categories.map(cat => ({ id: cat.id, name: cat.name }))
-    return [...base, ...fromBackend]
+    return [...inventoryStore.categories]
+})
+
+// Auto-select first category when categories load
+watch(dynamicCategories, (newCats) => {
+    if (newCats.length > 0 && !selectedCategory.value) {
+        selectedCategory.value = newCats[0].id
+    }
+}, { immediate: true })
+
+// Deferred rendering to avoid lag when switching categories
+watch(selectedCategory, () => {
+    productsLimit.value = 30
+    setTimeout(() => {
+        productsLimit.value = 1000 // Render all items after initial frame
+    }, 50)
 })
 
 const filteredProducts = computed(() => {
     let result = inventoryStore.products
-    if (selectedCategory.value !== 'all') {
+    if (selectedCategory.value) {
         result = result.filter(p => p.category?.id === selectedCategory.value)
     }
-    return result
+    return result.slice(0, productsLimit.value)
 })
 
 const cartTotal = computed(() => cart.value.reduce((total, item) => total + (item.price * item.quantity), 0))
@@ -283,9 +301,15 @@ const handleCheckout = async (data: { paymentMethod: string, shouldPrintTicket: 
     }
 }
 
+// Debounced sync to store to improve INP
+let syncTimeout: any = null
 watch(cart, (newCart) => {
     if (isSwitching.value) return
-    tablesStore.pendingOrders[selectedTable.value] = [...newCart]
+    
+    clearTimeout(syncTimeout)
+    syncTimeout = setTimeout(() => {
+        tablesStore.pendingOrders[selectedTable.value] = [...newCart]
+    }, 100) // Small delay to let UI breathe
 }, { deep: true })
 </script>
 
@@ -342,43 +366,43 @@ watch(cart, (newCart) => {
                         </div>
                     </div>
 
-                    <div class="max-h-[400px] overflow-y-auto no-scrollbar pb-4 w-full">
-                        <div class="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-2">
-                            <button 
-                                v-for="cat in dynamicCategories" 
-                                :key="cat.id" 
-                                @click="selectedCategory = cat.id" 
-                                class="aspect-square flex flex-col items-center justify-center p-2 rounded-[1.5rem] font-black transition-all border-2 text-center break-words leading-tight shadow-sm active:scale-95" 
-                                :class="selectedCategory === cat.id ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' : 'bg-card border-border text-foreground/50 hover:bg-accent/50'"
-                            >
-                                <span class="text-[10px] lg:text-xs uppercase tracking-wider">{{ cat.name }}</span>
-                            </button>
-                        </div>
+                    <div class="flex flex-wrap gap-2 max-h-[300px] overflow-y-auto no-scrollbar pb-4">
+                        <button 
+                            v-for="cat in dynamicCategories" 
+                            :key="cat.id" 
+                            @click="selectedCategory = cat.id" 
+                            class="flex-1 min-w-[120px] max-w-[200px] h-14 flex items-center justify-center px-4 rounded-2xl font-black transition-all border-2 text-center shadow-sm active:scale-95" 
+                            :class="selectedCategory === cat.id ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' : 'bg-card border-border text-foreground/50 hover:bg-accent/50'"
+                        >
+                            <span class="text-[10px] lg:text-xs uppercase tracking-wider truncate">{{ cat.name }}</span>
+                        </button>
                     </div>
                     <div class="h-px bg-border/50"></div>
                 </div>
 
                 <!-- Products Section -->
                 <div class="flex-1 flex flex-col min-w-0 space-y-4 overflow-hidden">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-4">
-                            <h2 class="text-xl font-black uppercase tracking-tighter text-foreground/20">Productos</h2>
-                            <div class="h-1 w-12 bg-primary/20 rounded-full"></div>
-                        </div>
-                    </div>
-
                     <div class="flex-1 overflow-y-auto pr-1 lg:pr-2 no-scrollbar">
-                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-4 pb-20 lg:pb-10">
-                            <button v-for="product in filteredProducts" :key="product.id" @click="addToCart(product)" class="group flex flex-col bg-card rounded-2xl lg:rounded-3xl border border-border shadow-sm hover:shadow-xl hover:border-primary/20 transition-all overflow-hidden text-left active:scale-[0.98] touch-manipulation">
-                                <div class="aspect-square relative overflow-hidden">
-                                    <img :src="inventoryStore.resolveImageUrl(product.image)" :alt="product.name" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
-                                    <div class="absolute bottom-3 right-3 w-8 h-8 lg:w-10 lg:h-10 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg transform lg:translate-y-4 lg:opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
-                                        <Plus class="w-5 h-5 lg:w-6 lg:h-6" />
+                        <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 2xl:grid-cols-8 gap-2 lg:gap-3 pb-20 lg:pb-10">
+                            <button 
+                                v-for="product in filteredProducts" 
+                                :key="product.id" 
+                                @click="addToCart(product)" 
+                                class="product-card group flex flex-col bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-all overflow-hidden text-left active:scale-[0.98] touch-manipulation"
+                            >
+                                <div class="aspect-square relative bg-accent/5">
+                                    <img 
+                                        :src="(product as any).resolvedImage" 
+                                        :alt="product.name" 
+                                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    >
+                                    <div class="absolute bottom-2 right-2 w-7 h-7 bg-primary text-white rounded-lg flex items-center justify-center shadow-lg transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 z-20">
+                                        <Plus class="w-4 h-4" />
                                     </div>
                                 </div>
-                                <div class="p-3 lg:p-4">
-                                    <h3 class="font-bold text-foreground text-sm lg:text-base truncate">{{ product.name }}</h3>
-                                    <p class="text-primary font-black text-base lg:text-lg">{{ currency }}{{ Number(product.price).toFixed(2) }}</p>
+                                <div class="p-2">
+                                    <h3 class="font-bold text-foreground text-[10px] lg:text-xs truncate">{{ product.name }}</h3>
+                                    <p class="text-primary font-black text-xs mt-0.5">{{ currency }}{{ Number(product.price).toFixed(2) }}</p>
                                 </div>
                             </button>
                         </div>
@@ -468,4 +492,27 @@ watch(cart, (newCart) => {
 <style scoped>
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.product-card {
+    content-visibility: auto;
+    contain-intrinsic-size: 100px 150px;
+}
+
+.animate-pulse-subtle {
+    animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-subtle {
+    0%, 100% { background-color: rgba(0, 0, 0, 0.05); }
+    50% { background-color: rgba(0, 0, 0, 0.1); }
+}
+
+.group img, .group .absolute {
+    will-change: transform, opacity;
+}
+
+button {
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+}
 </style>

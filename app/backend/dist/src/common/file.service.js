@@ -48,34 +48,37 @@ const axios_1 = __importDefault(require("axios"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const uuid_1 = require("uuid");
+const sharp = __importStar(require("sharp"));
 let FileService = class FileService {
-    async downloadAndSaveImage(url, targetDir) {
-        if (!url || !url.startsWith('http'))
-            return url;
+    async processAndSaveImage(buffer, targetDir) {
         if (!fs.existsSync(targetDir)) {
             fs.mkdirSync(targetDir, { recursive: true });
         }
+        const fileName = `${(0, uuid_1.v4)()}.webp`;
+        const filePath = path.join(targetDir, fileName);
+        await sharp(buffer)
+            .resize(300, 300, {
+            fit: 'cover',
+            position: 'center'
+        })
+            .webp({ quality: 80 })
+            .toFile(filePath);
+        return `${targetDir.replace('./', '/')}/${fileName}`;
+    }
+    async downloadAndSaveImage(url, targetDir) {
+        if (!url || !url.startsWith('http'))
+            return url;
         try {
             const response = await (0, axios_1.default)({
                 url,
                 method: 'GET',
-                responseType: 'stream',
-                timeout: 5000
+                responseType: 'arraybuffer',
+                timeout: 10000
             });
-            const fileName = `${(0, uuid_1.v4)()}.jpg`;
-            const filePath = path.join(targetDir, fileName);
-            const writer = fs.createWriteStream(filePath);
-            response.data.pipe(writer);
-            return new Promise((resolve, reject) => {
-                writer.on('finish', () => resolve(`${targetDir.replace('./', '/')}/${fileName}`));
-                writer.on('error', (err) => {
-                    console.error('Writer error:', err.message);
-                    resolve(url);
-                });
-            });
+            return await this.processAndSaveImage(Buffer.from(response.data), targetDir);
         }
         catch (error) {
-            console.error('Error downloading image:', error.message);
+            console.error('Error downloading/processing image:', error.message);
             return url;
         }
     }

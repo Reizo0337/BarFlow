@@ -290,7 +290,7 @@ export class InvoicesService {
         if (invoices.length > 0) {
             await this.invoiceRepository.update(
                 invoices.map(inv => inv.id),
-                { closing: savedClosing } as any
+                { closing: { id: savedClosing.id } } as any
             );
         }
 

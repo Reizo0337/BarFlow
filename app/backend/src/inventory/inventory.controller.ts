@@ -7,22 +7,22 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
+import { FileService } from '../common/file.service';
+import { memoryStorage } from 'multer';
+
 @ApiTags('inventory')
 @ApiBearerAuth()
 @Controller('inventory')
 @UseGuards(JwtAuthGuard)
 export class InventoryController {
-    constructor(private readonly inventoryService: InventoryService) { }
+    constructor(
+        private readonly inventoryService: InventoryService,
+        private readonly fileService: FileService
+    ) { }
 
     @Post('upload-image')
     @UseInterceptors(FileInterceptor('file', {
-        storage: diskStorage({
-            destination: './uploads/products',
-            filename: (req, file, cb) => {
-                const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
-                return cb(null, `${randomName}${extname(file.originalname)}`);
-            }
-        })
+        storage: memoryStorage() // Get in memory to process with sharp
     }))
     @ApiConsumes('multipart/form-data')
     @ApiBody({
@@ -36,10 +36,9 @@ export class InventoryController {
             },
         },
     })
-    uploadFile(@UploadedFile() file: any) {
-        return {
-            url: `/uploads/products/${file.filename}`
-        };
+    async uploadFile(@UploadedFile() file: any) {
+        const url = await this.fileService.processAndSaveImage(file.buffer, './uploads/products');
+        return { url };
     }
 
     @Get()
@@ -90,5 +89,10 @@ export class InventoryController {
     @Delete('categories/:id')
     removeCategory(@Param('id') id: string, @Request() req) {
         return this.inventoryService.removeCategory(+id, req.user.companyId);
+    }
+
+    @Post('apply-template')
+    applyTemplate(@Body() template: any[], @Request() req) {
+        return this.inventoryService.applyTemplate(template, req.user.companyId);
     }
 }

@@ -77,6 +77,9 @@ let InventoryService = class InventoryService {
             categoryId = category.id;
         }
         const { category, categoryName, ...rest } = createProductDto;
+        if (!rest.image && rest.imageUrl) {
+            rest.image = rest.imageUrl;
+        }
         if (rest.image && rest.image.startsWith('http')) {
             rest.image = await this.fileService.downloadAndSaveImage(rest.image, this.uploadDir);
         }
@@ -160,6 +163,7 @@ let InventoryService = class InventoryService {
     }
     async applyTemplate(template, companyId) {
         await this.productRepository.delete({ company: { id: companyId } });
+        await this.categoryRepository.delete({ company: { id: companyId } });
         for (const item of template) {
             await this.create(item, companyId);
         }

@@ -19,17 +19,18 @@ const product_dto_1 = require("./product.dto");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const swagger_1 = require("@nestjs/swagger");
 const platform_express_1 = require("@nestjs/platform-express");
+const file_service_1 = require("../common/file.service");
 const multer_1 = require("multer");
-const path_1 = require("path");
 let InventoryController = class InventoryController {
     inventoryService;
-    constructor(inventoryService) {
+    fileService;
+    constructor(inventoryService, fileService) {
         this.inventoryService = inventoryService;
+        this.fileService = fileService;
     }
-    uploadFile(file) {
-        return {
-            url: `/uploads/products/${file.filename}`
-        };
+    async uploadFile(file) {
+        const url = await this.fileService.processAndSaveImage(file.buffer, './uploads/products');
+        return { url };
     }
     findAll(req) {
         return this.inventoryService.findAll(req.user.companyId);
@@ -61,18 +62,15 @@ let InventoryController = class InventoryController {
     removeCategory(id, req) {
         return this.inventoryService.removeCategory(+id, req.user.companyId);
     }
+    applyTemplate(template, req) {
+        return this.inventoryService.applyTemplate(template, req.user.companyId);
+    }
 };
 exports.InventoryController = InventoryController;
 __decorate([
     (0, common_1.Post)('upload-image'),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
-        storage: (0, multer_1.diskStorage)({
-            destination: './uploads/products',
-            filename: (req, file, cb) => {
-                const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
-                return cb(null, `${randomName}${(0, path_1.extname)(file.originalname)}`);
-            }
-        })
+        storage: (0, multer_1.memoryStorage)()
     })),
     (0, swagger_1.ApiConsumes)('multipart/form-data'),
     (0, swagger_1.ApiBody)({
@@ -89,7 +87,7 @@ __decorate([
     __param(0, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "uploadFile", null);
 __decorate([
     (0, common_1.Get)(),
@@ -172,11 +170,20 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], InventoryController.prototype, "removeCategory", null);
+__decorate([
+    (0, common_1.Post)('apply-template'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array, Object]),
+    __metadata("design:returntype", void 0)
+], InventoryController.prototype, "applyTemplate", null);
 exports.InventoryController = InventoryController = __decorate([
     (0, swagger_1.ApiTags)('inventory'),
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('inventory'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __metadata("design:paramtypes", [inventory_service_1.InventoryService])
+    __metadata("design:paramtypes", [inventory_service_1.InventoryService,
+        file_service_1.FileService])
 ], InventoryController);
 //# sourceMappingURL=inventory.controller.js.map

@@ -16,7 +16,7 @@ export class InventoryService {
         @InjectRepository(Category)
         private categoryRepository: Repository<Category>,
         private fileService: FileService,
-    ) {}
+    ) { }
 
     findAll(companyId: number): Promise<Product[]> {
         return this.productRepository.find({
@@ -75,6 +75,11 @@ export class InventoryService {
         }
 
         const { category, categoryName, ...rest } = createProductDto;
+
+        // Support for template image field names
+        if (!rest.image && rest.imageUrl) {
+            rest.image = rest.imageUrl;
+        }
 
         if (rest.image && rest.image.startsWith('http')) {
             rest.image = await this.fileService.downloadAndSaveImage(rest.image, this.uploadDir);
@@ -170,7 +175,10 @@ export class InventoryService {
         // 1. Delete all existing products for this company
         await this.productRepository.delete({ company: { id: companyId } as any });
 
-        // 2. Iterate and create each product from template
+        // 2. Delete all existing categories for this company
+        await this.categoryRepository.delete({ company: { id: companyId } as any });
+
+        // 3. Iterate and create each product from template
         for (const item of template) {
             await this.create(item, companyId);
         }

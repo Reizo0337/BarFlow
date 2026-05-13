@@ -241,7 +241,7 @@ let InvoicesService = class InvoicesService {
         });
         const savedClosing = await this.dailyClosingRepository.save(closing);
         if (invoices.length > 0) {
-            await this.invoiceRepository.update(invoices.map(inv => inv.id), { closing: savedClosing });
+            await this.invoiceRepository.update(invoices.map(inv => inv.id), { closing: { id: savedClosing.id } });
         }
         return savedClosing;
     }
