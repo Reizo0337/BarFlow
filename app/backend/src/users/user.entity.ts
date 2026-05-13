@@ -18,6 +18,9 @@ export class User {
     @Column()
     pin: string;
 
+    @Column({ type: 'float', default: 8 })
+    contractedHours: number;
+
     @Index()
     @ManyToOne(() => Company, (company) => company.users)
     company: Company;

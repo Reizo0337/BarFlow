@@ -3,10 +3,12 @@ export declare class CreateUserDto {
     role: string;
     avatar?: string;
     pin: string;
+    contractedHours?: number;
 }
 export declare class UpdateUserDto {
     name?: string;
     role?: string;
     avatar?: string;
     pin?: string;
+    contractedHours?: number;
 }

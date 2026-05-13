@@ -18,6 +18,7 @@ let User = class User {
     role;
     avatar;
     pin;
+    contractedHours;
     company;
 };
 exports.User = User;
@@ -41,6 +42,10 @@ __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
 ], User.prototype, "pin", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'float', default: 8 }),
+    __metadata("design:type", Number)
+], User.prototype, "contractedHours", void 0);
 __decorate([
     (0, typeorm_1.Index)(),
     (0, typeorm_1.ManyToOne)(() => company_entity_1.Company, (company) => company.users),

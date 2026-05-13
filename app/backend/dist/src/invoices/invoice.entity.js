@@ -21,6 +21,8 @@ let Invoice = class Invoice {
     amount;
     status;
     paymentMethod;
+    previousHash;
+    hash;
     createdAt;
     company;
 };
@@ -57,6 +59,14 @@ __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], Invoice.prototype, "paymentMethod", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Invoice.prototype, "previousHash", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Invoice.prototype, "hash", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

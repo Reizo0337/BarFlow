@@ -8,6 +8,7 @@ export interface User {
     role: string;
     avatar: string;
     pin?: string;
+    contractedHours?: number;
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -82,22 +83,21 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    const switchUser = async (employeeId: number) => {
-        const found = employees.value.find(e => e.id === employeeId)
-        if (found) {
-            user.value = found
-            localStorage.setItem('user', JSON.stringify(found))
-        }
-    }
-
     const logout = () => {
+        // We keep companyCode to allow "pin-only" login after logout
         user.value = null
         token.value = null
-        companyCode.value = null
+
         localStorage.removeItem('token')
-        localStorage.removeItem('companyCode')
         localStorage.removeItem('user')
-        console.log('User logged out')
+
+        console.log('User session cleared, company preserved:', companyCode.value)
+    }
+
+    const clearAll = () => {
+        logout()
+        companyCode.value = null
+        localStorage.removeItem('companyCode')
     }
 
     return {
@@ -108,7 +108,7 @@ export const useAuthStore = defineStore('auth', () => {
         isLoading,
         fetchEmployees,
         loginSaaS,
-        switchUser,
-        logout
+        logout,
+        clearAll
     }
 })

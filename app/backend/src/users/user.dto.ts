@@ -16,6 +16,10 @@ export class CreateUserDto {
     @IsString()
     @IsNotEmpty()
     pin: string;
+
+    @IsNumber()
+    @IsOptional()
+    contractedHours?: number;
 }
 
 export class UpdateUserDto {
@@ -34,4 +38,8 @@ export class UpdateUserDto {
     @IsString()
     @IsOptional()
     pin?: string;
+
+    @IsNumber()
+    @IsOptional()
+    contractedHours?: number;
 }

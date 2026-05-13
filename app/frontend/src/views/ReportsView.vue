@@ -1,17 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { 
   FileText, 
-  Download, 
   Calendar, 
   Search, 
   RefreshCcw,
   Printer,
-  FileJson,
   FileSpreadsheet
 } from 'lucide-vue-next'
 
 import { useInvoicesStore } from '@/stores/invoices'
+
+// UI Kit
+import BaseButton from '@/components/ui/BaseButton.vue'
+import BaseInput from '@/components/ui/BaseInput.vue'
+import BaseCard from '@/components/ui/BaseCard.vue'
+import BaseBadge from '@/components/ui/BaseBadge.vue'
 
 const invoicesStore = useInvoicesStore()
 
@@ -30,86 +34,93 @@ const formatDate = (dateStr: string) => {
 }
 
 const reportTypes = [
-  { name: 'Libro de Ventas', icon: FileSpreadsheet, color: 'text-emerald-500' },
-  { name: 'Consumo de Stock', icon: RefreshCcw, color: 'text-amber-500' },
-  { name: 'Rendimiento Personal', icon: FileText, color: 'text-primary' },
-  { name: 'Histórico de IVA', icon: Printer, color: 'text-rose-500' },
+  { name: 'Libro de Ventas', icon: FileSpreadsheet, variant: 'success' as const },
+  { name: 'Consumo de Stock', icon: RefreshCcw, variant: 'warning' as const },
+  { name: 'Rendimiento Personal', icon: FileText, variant: 'primary' as const },
+  { name: 'Histórico de IVA', icon: Printer, variant: 'error' as const },
 ]
 </script>
 
 <template>
   <div class="h-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-4xl font-black tracking-tighter text-foreground uppercase">Centro de Reportes</h1>
-        <p class="text-foreground/50 font-bold">Generación de informes exportables e historial del sistema.</p>
-      </div>
-    </div>
+    <header>
+      <h1 class="text-5xl font-black tracking-tighter text-foreground uppercase">Centro de Reportes</h1>
+      <p class="text-foreground/40 font-bold text-lg italic">Inteligencia de negocio y auditoría del sistema.</p>
+    </header>
 
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <!-- Quick Export Actions -->
-      <div 
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <BaseCard 
         v-for="report in reportTypes" 
         :key="report.name"
-        class="bg-card p-6 rounded-3xl border border-border shadow-sm hover:shadow-xl hover:border-primary/20 transition-all cursor-pointer group"
+        class="group flex flex-col"
       >
-        <div class="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center mb-4 group-hover:bg-primary/10 transition-colors">
-          <component :is="report.icon" class="w-6 h-6" :class="report.color" />
+        <div :class="[
+          'w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform',
+          report.variant === 'success' ? 'bg-emerald-500/10 text-emerald-500' :
+          report.variant === 'warning' ? 'bg-amber-500/10 text-amber-500' :
+          report.variant === 'error' ? 'bg-destructive/10 text-destructive' :
+          'bg-primary/10 text-primary'
+        ]">
+          <component :is="report.icon" class="w-7 h-7" />
         </div>
-        <h3 class="font-black text-sm uppercase mb-1">{{ report.name }}</h3>
-        <p class="text-[10px] text-foreground/40 font-bold mb-4 uppercase">Descargar reporte mensual</p>
-        <div class="flex items-center gap-2">
-          <button class="flex-1 py-2 bg-accent/20 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-primary hover:text-white transition-all">PDF</button>
-          <button class="flex-1 py-2 bg-accent/20 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-primary hover:text-white transition-all">Excel</button>
+        <h3 class="font-black text-sm uppercase tracking-wider mb-1">{{ report.name }}</h3>
+        <p class="text-[10px] text-foreground/20 font-black uppercase tracking-widest mb-6">Generar reporte mensual</p>
+        
+        <div class="flex items-center gap-2 mt-auto">
+          <BaseButton variant="secondary" size="sm" class="flex-1">PDF</BaseButton>
+          <BaseButton variant="secondary" size="sm" class="flex-1">EXCEL</BaseButton>
         </div>
-      </div>
+      </BaseCard>
     </div>
 
-    <!-- System Log / Activity -->
-    <div class="flex-1 bg-card rounded-[2.5rem] border border-border shadow-xl flex flex-col overflow-hidden">
-      <div class="p-6 border-b border-border flex items-center justify-between bg-accent/5">
+    <BaseCard padding="none" :hover="false" class="flex-1 flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-8 border-b border-border flex flex-col md:flex-row md:items-center justify-between bg-accent/5 gap-4">
         <h3 class="font-black text-xl uppercase tracking-widest text-primary">Historial de Actividad</h3>
         <div class="flex items-center gap-4">
-          <div class="relative w-64">
-            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/30" />
-            <input type="text" placeholder="Filtrar eventos..." class="w-full pl-10 pr-4 py-2 bg-accent/20 border-border rounded-xl text-xs outline-none">
-          </div>
-          <button class="p-2 hover:bg-accent/30 rounded-xl transition-all"><Calendar class="w-5 h-5 text-foreground/40" /></button>
+          <BaseInput 
+            placeholder="Filtrar eventos..." 
+            :icon="Search"
+            class="md:w-72"
+          />
+          <BaseButton variant="outline" size="icon">
+            <Calendar class="w-5 h-5" />
+          </BaseButton>
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto">
+      <div class="flex-1 overflow-y-auto no-scrollbar">
         <table class="w-full text-left">
-          <thead class="bg-accent/10 sticky top-0">
+          <thead class="bg-accent/10 sticky top-0 z-10">
             <tr>
-              <th class="px-6 py-4 text-[10px] font-black uppercase text-foreground/30">Fecha / Hora</th>
-              <th class="px-6 py-4 text-[10px] font-black uppercase text-foreground/30">Evento</th>
-              <th class="px-6 py-4 text-[10px] font-black uppercase text-foreground/30">Empleado</th>
-              <th class="px-6 py-4 text-[10px] font-black uppercase text-foreground/30">Descripción</th>
-              <th class="px-6 py-4 text-[10px] font-black uppercase text-foreground/30 text-right">Monto</th>
+              <th class="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-foreground/30">Fecha / Hora</th>
+              <th class="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-foreground/30">Evento</th>
+              <th class="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-foreground/30">Responsable</th>
+              <th class="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-foreground/30">Descripción</th>
+              <th class="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-foreground/30 text-right">Monto</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
-            <tr v-for="inv in invoicesStore.invoices" :key="inv.id" class="hover:bg-accent/5 transition-colors">
-              <td class="px-6 py-4 font-mono text-[10px] font-bold text-foreground/40">{{ formatDate(inv.createdAt) }}</td>
-              <td class="px-6 py-4">
-                <span 
-                  class="px-2 py-0.5 rounded text-[10px] font-black uppercase"
-                  :class="{
-                    'bg-emerald-500/10 text-emerald-500': inv.type === 'out',
-                    'bg-destructive/10 text-destructive': inv.type === 'in'
-                  }"
-                >{{ inv.type === 'out' ? 'Venta' : 'Compra' }}</span>
+          <tbody class="divide-y divide-border/50">
+            <tr v-for="inv in invoicesStore.invoices" :key="inv.id" class="group hover:bg-accent/5 transition-colors">
+              <td class="px-8 py-6 font-mono text-[10px] font-bold text-foreground/30">{{ formatDate(inv.createdAt) }}</td>
+              <td class="px-8 py-6">
+                <BaseBadge :variant="inv.type === 'out' ? 'success' : 'error'">
+                  {{ inv.type === 'out' ? 'Venta' : 'Compra' }}
+                </BaseBadge>
               </td>
-              <td class="px-6 py-4 font-bold text-xs">{{ inv.clientName }}</td>
-              <td class="px-6 py-4 text-xs font-medium text-foreground/60">Factura {{ inv.invoiceNumber }}</td>
-              <td class="px-6 py-4 text-right font-black text-xs" :class="inv.type === 'in' ? 'text-destructive' : 'text-primary'">
+              <td class="px-8 py-6 font-black text-xs uppercase tracking-tight">{{ inv.clientName }}</td>
+              <td class="px-8 py-6 text-xs font-bold text-foreground/40 italic">Factura Ref #{{ inv.invoiceNumber }}</td>
+              <td class="px-8 py-6 text-right font-black text-sm" :class="inv.type === 'in' ? 'text-destructive' : 'text-primary'">
                 {{ inv.type === 'in' ? '-' : '' }}${{ Number(inv.amount).toFixed(2) }}
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
+    </BaseCard>
   </div>
 </template>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>

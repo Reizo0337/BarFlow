@@ -16,6 +16,7 @@ class CreateUserDto {
     role;
     avatar;
     pin;
+    contractedHours;
 }
 exports.CreateUserDto = CreateUserDto;
 __decorate([
@@ -38,11 +39,17 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "pin", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], CreateUserDto.prototype, "contractedHours", void 0);
 class UpdateUserDto {
     name;
     role;
     avatar;
     pin;
+    contractedHours;
 }
 exports.UpdateUserDto = UpdateUserDto;
 __decorate([
@@ -65,4 +72,9 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], UpdateUserDto.prototype, "pin", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], UpdateUserDto.prototype, "contractedHours", void 0);
 //# sourceMappingURL=user.dto.js.map

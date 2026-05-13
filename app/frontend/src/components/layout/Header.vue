@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useThemeStore } from '@/stores/theme'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
+import { useShiftsStore } from '@/stores/shifts'
 import { Minus, Square, X, Copy, Sun, Moon, Menu, ChevronDown, User, LogOut } from 'lucide-vue-next'
 
 import { useRouter } from 'vue-router'
@@ -10,19 +11,19 @@ import { useRouter } from 'vue-router'
 const themeStore = useThemeStore()
 const uiStore = useUIStore()
 const authStore = useAuthStore()
+const shiftsStore = useShiftsStore()
 const router = useRouter()
 
 const isUserMenuOpen = ref(false)
 
-const handleLogout = () => {
+const handleLogout = async () => {
+  // End shift if active before logging out
+  if (shiftsStore.currentShift) {
+    await shiftsStore.endShift()
+  }
   authStore.logout()
   isUserMenuOpen.value = false
   router.push('/portal')
-}
-
-const selectEmployee = (id: number) => {
-  authStore.switchUser(id)
-  isUserMenuOpen.value = false
 }
 
 declare global {
@@ -66,28 +67,16 @@ declare global {
         <!-- User Dropdown -->
         <div 
           v-if="isUserMenuOpen"
-          class="absolute top-full left-0 mt-2 w-64 bg-card border border-border shadow-2xl rounded-3xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+          class="absolute top-full left-0 mt-2 w-56 bg-card border border-border shadow-2xl rounded-3xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
         >
-          <div class="p-4 bg-accent/10 border-b border-border">
-            <p class="text-[10px] font-black text-foreground/30 uppercase tracking-[0.2em] mb-3">Cambiar de Empleado</p>
-            <div class="space-y-1">
-              <button 
-                v-for="emp in authStore.employees" 
-                :key="emp.id"
-                @click="selectEmployee(emp.id)"
-                class="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-primary/10 transition-all group"
-                :class="authStore.user?.id === emp.id ? 'bg-primary/5' : ''"
-              >
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-accent/20 border border-border text-[10px] font-black text-foreground/40 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
-                  {{ emp.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) }}
-                </div>
-                <div class="flex-1 text-left">
-                  <p class="text-xs font-black text-foreground/70">{{ emp.name }}</p>
-                  <p class="text-[10px] font-bold text-foreground/30">{{ emp.role }}</p>
-                </div>
-                <div v-if="authStore.user?.id === emp.id" class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(124,58,237,0.5)]"></div>
-              </button>
-            </div>
+          <div class="p-4 bg-accent/10 border-b border-border flex items-center gap-3">
+             <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <User class="w-5 h-5 text-primary" />
+             </div>
+             <div>
+                <p class="text-xs font-black text-foreground uppercase tracking-tighter">{{ authStore.user.name }}</p>
+                <p class="text-[9px] font-bold text-foreground/30 uppercase tracking-widest">{{ authStore.user.role }}</p>
+             </div>
           </div>
           <div class="p-2">
             <button 

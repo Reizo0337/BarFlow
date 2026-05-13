@@ -30,6 +30,12 @@ export class Invoice {
     @Column({ nullable: true })
     paymentMethod: string;
 
+    @Column({ nullable: true })
+    previousHash: string;
+
+    @Column({ nullable: true })
+    hash: string;
+
     @CreateDateColumn()
     createdAt: Date;
 

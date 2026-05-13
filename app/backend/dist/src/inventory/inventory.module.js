@@ -13,13 +13,14 @@ const product_entity_1 = require("./product.entity");
 const category_entity_1 = require("./category.entity");
 const inventory_service_1 = require("./inventory.service");
 const inventory_controller_1 = require("./inventory.controller");
+const file_service_1 = require("../common/file.service");
 let InventoryModule = class InventoryModule {
 };
 exports.InventoryModule = InventoryModule;
 exports.InventoryModule = InventoryModule = __decorate([
     (0, common_1.Module)({
         imports: [typeorm_1.TypeOrmModule.forFeature([product_entity_1.Product, category_entity_1.Category])],
-        providers: [inventory_service_1.InventoryService],
+        providers: [inventory_service_1.InventoryService, file_service_1.FileService],
         controllers: [inventory_controller_1.InventoryController],
         exports: [inventory_service_1.InventoryService, typeorm_1.TypeOrmModule],
     })

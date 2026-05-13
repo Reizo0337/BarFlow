@@ -7,6 +7,8 @@ export declare class Invoice {
     amount: number;
     status: 'paid' | 'pending' | 'cancelled';
     paymentMethod: string;
+    previousHash: string;
+    hash: string;
     createdAt: Date;
     company: Company;
 }

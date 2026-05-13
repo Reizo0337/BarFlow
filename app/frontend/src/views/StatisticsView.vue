@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { onMounted, computed } from 'vue'
 import { 
   BarChart3, 
   TrendingUp, 
@@ -7,7 +7,6 @@ import {
   Calendar, 
   ArrowUpRight, 
   ArrowDownRight,
-  Filter,
   Download
 } from 'lucide-vue-next'
 import { 
@@ -34,6 +33,11 @@ ChartJS.register(
 
 import { useInvoicesStore } from '@/stores/invoices'
 
+// UI Kit
+import BaseButton from '@/components/ui/BaseButton.vue'
+import BaseCard from '@/components/ui/BaseCard.vue'
+import StatCard from '@/components/ui/StatCard.vue'
+
 const invoicesStore = useInvoicesStore()
 
 onMounted(() => {
@@ -50,10 +54,10 @@ const stats = computed(() => {
   
   return {
     thisMonth: totalRevenue,
-    lastMonth: totalRevenue * 0.8, // Simplified mock for comparison
+    lastMonth: totalRevenue * 0.8,
     growth: 15.2,
     avgTicket: avgTicket,
-    customers: totalSales // Simplified: each sale is a customer
+    customers: totalSales
   }
 })
 
@@ -62,7 +66,7 @@ const barData = {
   datasets: [
     {
       label: 'Ventas esta semana',
-      backgroundColor: '#7c3aed',
+      backgroundColor: '#059669', // Primary Emerald
       borderRadius: 12,
       data: [840, 920, 780, 1100, 1540, 1980, 1650]
     }
@@ -74,8 +78,8 @@ const lineData = {
   datasets: [
     {
       label: 'Mes Actual',
-      borderColor: '#7c3aed',
-      backgroundColor: 'rgba(124, 58, 237, 0.1)',
+      borderColor: '#059669',
+      backgroundColor: 'rgba(5, 150, 105, 0.1)',
       borderWidth: 4,
       tension: 0.4,
       fill: true,
@@ -96,7 +100,7 @@ const doughnutData = {
   labels: ['Bebidas', 'Comida', 'Café'],
   datasets: [
     {
-      backgroundColor: ['#7c3aed', '#ec4899', '#f59e0b'],
+      backgroundColor: ['#059669', '#ec4899', '#f59e0b'],
       borderWidth: 0,
       hoverOffset: 20,
       data: [60, 30, 10]
@@ -130,130 +134,108 @@ const doughnutOptions: any = {
   <div class="space-y-8 animate-in zoom-in-95 duration-500">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div>
-        <h1 class="text-4xl font-black tracking-tight text-foreground text-glow">Estadísticas de Venta</h1>
-        <p class="text-foreground/50 font-medium italic">Análisis detallado de rendimiento y tendencias.</p>
+        <h1 class="text-5xl font-black tracking-tighter text-foreground uppercase">Análisis de Datos</h1>
+        <p class="text-foreground/40 font-bold italic">Tendencias, proyecciones y KPIs de negocio.</p>
       </div>
       <div class="flex items-center gap-3">
-        <button class="flex items-center gap-2 px-5 py-2.5 bg-accent/20 rounded-2xl font-bold hover:bg-accent/40 transition-all text-sm">
-          <Calendar class="w-4 h-4" />
+        <BaseButton variant="secondary">
+          <template #icon-left><Calendar class="w-4 h-4" /></template>
           Últimos 30 días
-        </button>
-        <button class="p-2.5 bg-primary/10 text-primary rounded-2xl hover:bg-primary hover:text-white transition-all shadow-lg shadow-primary/10">
+        </BaseButton>
+        <BaseButton variant="primary" size="icon">
           <Download class="w-5 h-5" />
-        </button>
+        </BaseButton>
       </div>
     </div>
 
     <!-- Metrics Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div class="bg-card p-6 rounded-[2rem] border border-border shadow-sm flex flex-col justify-between hover:shadow-xl transition-shadow">
-        <div class="flex items-center justify-between mb-4">
-          <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-            <BarChart3 class="w-6 h-6" />
-          </div>
-          <div class="flex items-center gap-1 text-emerald-500 text-xs font-black bg-emerald-500/10 px-2 py-1 rounded-lg">
-            <ArrowUpRight class="w-3 h-3" />
-            {{ stats.growth }}%
-          </div>
-        </div>
-        <p class="text-xs font-black text-foreground/30 uppercase tracking-widest">Ventas este Mes</p>
-        <p class="text-3xl font-black">${{ Number(stats.thisMonth).toLocaleString() }}</p>
-      </div>
-
-      <div class="bg-card p-6 rounded-[2rem] border border-border shadow-sm flex flex-col justify-between">
-        <div class="flex items-center justify-between mb-4">
-          <div class="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-500">
-            <TrendingUp class="w-6 h-6" />
-          </div>
-        </div>
-        <p class="text-xs font-black text-foreground/30 uppercase tracking-widest">Ticket Medio</p>
-        <p class="text-3xl font-black">${{ Number(stats.avgTicket).toFixed(2) }}</p>
-      </div>
-
-      <div class="bg-card p-6 rounded-[2rem] border border-border shadow-sm flex flex-col justify-between">
-        <div class="flex items-center justify-between mb-4">
-          <div class="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500">
-            <Users class="w-6 h-6" />
-          </div>
-        </div>
-        <p class="text-xs font-black text-foreground/30 uppercase tracking-widest">Clientes Totales</p>
-        <p class="text-3xl font-black">{{ stats.customers }}</p>
-      </div>
-
-      <div class="bg-card p-6 rounded-[2rem] border border-border shadow-sm flex flex-col justify-between">
-        <div class="flex items-center justify-between mb-4">
-          <div class="w-10 h-10 bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-500">
-            <ArrowDownRight class="w-6 h-6" />
-          </div>
-        </div>
-        <p class="text-xs font-black text-foreground/30 uppercase tracking-widest">Mes Pasado</p>
-        <p class="text-3xl font-black text-foreground/60">${{ stats.lastMonth.toLocaleString() }}</p>
-      </div>
+      <StatCard 
+        title="Ingresos Mes" 
+        :value="`$${Number(stats.thisMonth).toLocaleString()}`" 
+        :icon="BarChart3" 
+        footer="+15.2% vs mes anterior"
+      />
+      <StatCard 
+        title="Ticket Medio" 
+        :value="`$${Number(stats.avgTicket).toFixed(2)}`" 
+        :icon="TrendingUp" 
+        variant="success"
+        footer="Promedio por ticket"
+      />
+      <StatCard 
+        title="Clientes" 
+        :value="stats.customers" 
+        :icon="Users" 
+        variant="neutral"
+        footer="Transacciones totales"
+      />
+      <StatCard 
+        title="Mes Pasado" 
+        :value="`$${stats.lastMonth.toLocaleString()}`" 
+        :icon="ArrowDownRight" 
+        variant="error"
+        footer="Facturación anterior"
+      />
     </div>
 
-    <!-- Charts Row 1: Line Chart -->
+    <!-- Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 bg-card p-8 rounded-[2.5rem] border border-border shadow-xl">
+      <BaseCard class="lg:col-span-2">
         <div class="flex items-center justify-between mb-8">
           <div>
-            <h3 class="font-black text-xl">Ingresos vs Periodo Anterior</h3>
-            <p class="text-sm font-medium text-foreground/30 italic">Comparativa de facturación por semanas</p>
+            <h3 class="font-black text-xl uppercase tracking-tight">Evolución de Ingresos</h3>
+            <p class="text-xs font-bold text-foreground/30 uppercase tracking-widest">Comparativa semanal</p>
           </div>
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-6">
             <div class="flex items-center gap-2">
-              <span class="w-3 h-3 bg-primary rounded-full"></span>
-              <span class="text-xs font-bold text-foreground/60">Mes Actual</span>
+              <span class="w-3 h-3 bg-primary rounded-full shadow-lg shadow-primary/20"></span>
+              <span class="text-[10px] font-black text-foreground/40 uppercase">Actual</span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="w-3 h-3 bg-foreground/30 rounded-full"></span>
-              <span class="text-xs font-bold text-foreground/60">Mes Pasado</span>
+              <span class="w-3 h-3 bg-foreground/10 rounded-full"></span>
+              <span class="text-[10px] font-black text-foreground/40 uppercase">Anterior</span>
             </div>
           </div>
         </div>
         <div class="h-[300px]">
           <Line :data="lineData" :options="chartOptions" />
         </div>
-      </div>
+      </BaseCard>
 
-      <div class="bg-card p-8 rounded-[2.5rem] border border-border shadow-xl">
-        <h3 class="font-black text-xl mb-2 text-center">Distribución Ventas</h3>
-        <p class="text-xs font-medium text-foreground/30 text-center mb-8 uppercase tracking-widest">Por categoría de producto</p>
+      <BaseCard class="flex flex-col">
+        <h3 class="font-black text-xl mb-2 text-center uppercase tracking-tight">Mix de Ventas</h3>
+        <p class="text-[9px] font-black text-foreground/30 text-center mb-8 uppercase tracking-[0.2em]">Por categoría de producto</p>
         <div class="h-[250px] relative">
           <Doughnut :data="doughnutData" :options="doughnutOptions" />
           <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <p class="text-[10px] font-black text-foreground/30 uppercase">Mix</p>
-            <p class="text-3xl font-black text-primary">Top</p>
+            <p class="text-[10px] font-black text-foreground/20 uppercase tracking-widest">Ratio</p>
+            <p class="text-4xl font-black text-primary tracking-tighter">60%</p>
           </div>
         </div>
-        <div class="mt-6 space-y-2">
-          <div v-for="(cat, i) in doughnutData.labels" :key="cat" class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
+        <div class="mt-8 space-y-3">
+          <div v-for="(cat, i) in doughnutData.labels" :key="cat" class="flex items-center justify-between p-2 rounded-xl hover:bg-accent/10 transition-colors">
+            <div class="flex items-center gap-3">
               <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: doughnutData.datasets[0]?.backgroundColor?.[i] || '#ccc' }"></div>
-              <span class="text-sm font-bold text-foreground/60">{{ cat }}</span>
+              <span class="text-xs font-black text-foreground/50 uppercase tracking-widest">{{ cat }}</span>
             </div>
             <span class="text-sm font-black">{{ doughnutData.datasets[0]?.data?.[i] }}%</span>
           </div>
         </div>
-      </div>
+      </BaseCard>
     </div>
 
-    <!-- Charts Row 2: Bar Chart -->
-    <div class="bg-card p-8 rounded-[2.5rem] border border-border shadow-xl">
+    <!-- Bar Chart -->
+    <BaseCard>
       <div class="flex items-center justify-between mb-8">
         <div>
-          <h3 class="font-black text-xl">Ventas por Día (Semana Actual)</h3>
-          <p class="text-sm font-medium text-foreground/30">Picos de actividad diaria</p>
+          <h3 class="font-black text-xl uppercase tracking-tight">Actividad Diaria</h3>
+          <p class="text-xs font-bold text-foreground/30 uppercase tracking-widest">Picos de demanda semanal</p>
         </div>
       </div>
       <div class="h-[200px]">
         <Bar :data="barData" :options="chartOptions" />
       </div>
-    </div>
+    </BaseCard>
   </div>
 </template>
-
-<style scoped>
-.text-glow {
-  text-shadow: 0 0 40px rgba(124, 58, 237, 0.2);
-}
-</style>
