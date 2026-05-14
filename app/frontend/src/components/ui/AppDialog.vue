@@ -76,14 +76,19 @@ const currentIcon = icons[props.type]
                             <component :is="currentIcon.component" :class="['w-8 h-8', currentIcon.color]" />
                         </div>
                         
-                        <div class="space-y-2">
-                            <h3 class="text-xl font-black tracking-tight text-foreground">{{ title }}</h3>
-                            <p class="text-foreground/50 font-medium leading-relaxed">{{ message }}</p>
+                        <div v-if="title || message" class="space-y-2">
+                            <h3 v-if="title" class="text-xl font-black tracking-tight text-foreground">{{ title }}</h3>
+                            <p v-if="message" class="text-foreground/50 font-medium leading-relaxed">{{ message }}</p>
                         </div>
                     </div>
 
-                    <!-- Actions -->
-                    <div class="mt-8 flex flex-col sm:flex-row gap-3">
+                    <!-- Custom Content Slot -->
+                    <div v-if="$slots.default" class="mt-6">
+                        <slot />
+                    </div>
+
+                    <!-- Actions (only if not a custom form) -->
+                    <div v-if="!$slots.default" class="mt-8 flex flex-col sm:flex-row gap-3">
                         <template v-if="type === 'confirm'">
                             <button 
                                 @click="handleCancel" 

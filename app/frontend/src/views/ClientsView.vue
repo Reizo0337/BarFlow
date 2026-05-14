@@ -26,6 +26,36 @@ const clientForm = ref({
     notes: ''
 })
 
+const alertDialog = ref({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info' as any,
+    confirmText: 'Aceptar',
+    onConfirm: () => {}
+})
+
+const showAlert = (title: string, message: string, type: string = 'error') => {
+    alertDialog.value = { 
+        ...alertDialog.value, 
+        isOpen: true, title, message, type, 
+        confirmText: 'Aceptar',
+        onConfirm: () => alertDialog.value.isOpen = false 
+    }
+}
+
+const showConfirm = (title: string, message: string, onConfirm: () => void) => {
+    alertDialog.value = { 
+        isOpen: true, title, message, 
+        type: 'confirm', 
+        confirmText: 'Eliminar',
+        onConfirm: () => {
+            onConfirm()
+            alertDialog.value.isOpen = false
+        }
+    }
+}
+
 onMounted(() => {
     fetchClients()
 })
@@ -71,7 +101,7 @@ const openEditModal = (client: any) => {
 
 const handleSubmit = async () => {
     if (!clientForm.value.fiscalId || !clientForm.value.phone) {
-        alert('Datos fiscales y Teléfono son obligatorios.')
+        showAlert('Faltan Datos', 'Los datos fiscales y el teléfono son obligatorios para dar de alta un cliente.', 'warning')
         return
     }
 
@@ -88,12 +118,17 @@ const handleSubmit = async () => {
     finally { isSubmitting.value = false }
 }
 
-const deleteClient = async (id: number) => {
-    if (!confirm('¿Estás seguro de eliminar este cliente?')) return
-    try {
-        await api.delete(`/clients/${id}`)
-        await fetchClients()
-    } catch (e) { console.error(e) }
+const deleteClient = (id: number) => {
+    showConfirm(
+        '¿Eliminar Cliente?', 
+        'Esta acción no se puede deshacer y el cliente perderá su historial asociado.',
+        async () => {
+            try {
+                await api.delete(`/clients/${id}`)
+                await fetchClients()
+            } catch (e) { console.error(e) }
+        }
+    )
 }
 
 const viewHistory = async (client: any) => {
@@ -145,7 +180,11 @@ const formatDate = (dateStr: string) => {
 
         <div v-else-if="filteredClients.length === 0" class="py-20 text-center bg-accent/5 rounded-[3rem] border border-dashed border-border">
             <Users class="w-16 h-16 text-foreground/10 mx-auto mb-4" />
-            <p class="text-xl font-bold text-foreground/30 italic">No hay clientes que coincidan con tu búsqueda.</p>
+            <p class="text-xl font-bold text-foreground/30 italic mb-6">No hay clientes que coincidan con tu búsqueda.</p>
+            <BaseButton variant="primary" @click="openAddModal">
+                <template #icon-left><Plus class="w-5 h-5" /></template>
+                Crear Primer Cliente
+            </BaseButton>
         </div>
 
         <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -278,6 +317,18 @@ const formatDate = (dateStr: string) => {
                 </div>
             </div>
         </div>
+
+        <!-- ALERT/CONFIRM DIALOG -->
+        <AppDialog 
+            :is-open="alertDialog.isOpen" 
+            :title="alertDialog.title" 
+            :message="alertDialog.message" 
+            :type="alertDialog.type"
+            :confirm-text="alertDialog.confirmText"
+            @close="alertDialog.isOpen = false"
+            @confirm="alertDialog.onConfirm"
+            @cancel="alertDialog.isOpen = false"
+        />
     </div>
 </template>
 

@@ -6,4 +6,9 @@ export declare class AiController {
         text: string;
         history?: any[];
     }, req: any): Promise<any[]>;
+    analyzeStats(body: {
+        stats: any;
+    }, req: any): Promise<{
+        summary: any;
+    }>;
 }

@@ -12,6 +12,7 @@ export interface TableOrder {
 
 export const useTablesStore = defineStore('tables', () => {
     const pendingOrders = ref<Record<string, any[]>>({})
+    const tableLayout = ref<any[]>([])
     const isLoading = ref(false)
 
     const fetchPendingOrders = async () => {
@@ -20,7 +21,11 @@ export const useTablesStore = defineStore('tables', () => {
             const response = await api.get('/tables')
             const orders: Record<string, any[]> = {}
             response.data.forEach((order: any) => {
-                orders[order.tableNumber] = JSON.parse(order.cartData)
+                if (order.tableNumber === 'LAYOUT_CONFIG') {
+                    tableLayout.value = JSON.parse(order.cartData)
+                } else {
+                    orders[order.tableNumber] = JSON.parse(order.cartData)
+                }
             })
             pendingOrders.value = orders
         } catch (error) {
@@ -33,10 +38,17 @@ export const useTablesStore = defineStore('tables', () => {
     const saveTableOrder = async (tableNumber: string, cartData: any[], total: number) => {
         try {
             await api.post('/tables', { tableNumber, cartData, total })
-            pendingOrders.value[tableNumber] = [...cartData]
+            if (tableNumber !== 'LAYOUT_CONFIG') {
+                pendingOrders.value[tableNumber] = [...cartData]
+            }
         } catch (error) {
             console.error('Error saving table order:', error)
         }
+    }
+
+    const saveTableLayout = async (layout: any[]) => {
+        tableLayout.value = layout
+        await saveTableOrder('LAYOUT_CONFIG', layout, 0)
     }
 
     const clearTableOrder = async (tableNumber: string) => {
@@ -50,9 +62,11 @@ export const useTablesStore = defineStore('tables', () => {
 
     return {
         pendingOrders,
+        tableLayout,
         isLoading,
         fetchPendingOrders,
         saveTableOrder,
+        saveTableLayout,
         clearTableOrder
     }
 })

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Package, AlertTriangle, Tag, ArrowDownLeft, MoreHorizontal } from 'lucide-vue-next'
 import BaseCard from '@/components/ui/BaseCard.vue'
 
@@ -8,12 +9,12 @@ const props = defineProps<{
   totalCategories: number
 }>()
 
-const stats = [
+const stats = computed(() => [
   { label: 'Productos Totales', value: props.totalProducts, icon: Package, color: 'text-primary', bg: 'bg-primary/5' },
   { label: 'Para Reponer', value: props.lowStockCount, icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/5' },
   { label: 'Categorías', value: props.totalCategories, icon: Tag, color: 'text-emerald-500', bg: 'bg-emerald-500/5' },
   { label: 'Salidas 30d', value: '842', icon: ArrowDownLeft, color: 'text-destructive', bg: 'bg-destructive/5' }
-]
+])
 </script>
 
 <template>

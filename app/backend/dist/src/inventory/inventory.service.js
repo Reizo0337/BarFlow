@@ -40,18 +40,21 @@ let InventoryService = class InventoryService {
             where: { company: { id: companyId } }
         });
     }
-    async findCategoryByName(name, companyId) {
-        return this.categoryRepository.createQueryBuilder('category')
+    async findCategoryByName(name, companyId, manager) {
+        const repo = manager ? manager.getRepository(category_entity_1.Category) : this.categoryRepository;
+        return repo.createQueryBuilder('category')
+            .innerJoin('category.company', 'company')
             .where('LOWER(category.name) = LOWER(:name)', { name })
-            .andWhere('category.companyId = :companyId', { companyId })
+            .andWhere('company.id = :companyId', { companyId })
             .getOne();
     }
-    async createCategory(name, companyId) {
-        const category = this.categoryRepository.create({
+    async createCategory(name, companyId, manager) {
+        const repo = manager ? manager.getRepository(category_entity_1.Category) : this.categoryRepository;
+        const category = repo.create({
             name,
             company: { id: companyId }
         });
-        return this.categoryRepository.save(category);
+        return repo.save(category);
     }
     async updateCategory(id, name, companyId) {
         await this.categoryRepository.update({ id, company: { id: companyId } }, { name });
@@ -66,24 +69,25 @@ let InventoryService = class InventoryService {
             relations: ['category']
         });
     }
-    async create(createProductDto, companyId) {
+    async create(createProductDto, companyId, manager) {
         let categoryId = createProductDto.categoryId;
         const catName = createProductDto.categoryName || (typeof createProductDto.category === 'string' ? createProductDto.category : null);
         if (catName) {
-            let category = await this.findCategoryByName(catName, companyId);
+            let category = await this.findCategoryByName(catName, companyId, manager);
             if (!category) {
-                category = await this.createCategory(catName, companyId);
+                category = await this.createCategory(catName, companyId, manager);
             }
             categoryId = category.id;
         }
-        const { category, categoryName, ...rest } = createProductDto;
+        const { category, categoryName, categoryId: dtoCategoryId, ...rest } = createProductDto;
         if (!rest.image && rest.imageUrl) {
             rest.image = rest.imageUrl;
         }
         if (rest.image && rest.image.startsWith('http')) {
             rest.image = await this.fileService.downloadAndSaveImage(rest.image, this.uploadDir);
         }
-        return this.productRepository.save({
+        const repo = manager ? manager.getRepository(product_entity_1.Product) : this.productRepository;
+        return repo.save({
             ...rest,
             category: categoryId ? { id: categoryId } : null,
             company: { id: companyId }
@@ -162,11 +166,21 @@ let InventoryService = class InventoryService {
             .getOne();
     }
     async applyTemplate(template, companyId) {
-        await this.productRepository.delete({ company: { id: companyId } });
-        await this.categoryRepository.delete({ company: { id: companyId } });
-        for (const item of template) {
-            await this.create(item, companyId);
-        }
+        await this.productRepository.manager.transaction(async (transactionalEntityManager) => {
+            await transactionalEntityManager.createQueryBuilder()
+                .delete()
+                .from(product_entity_1.Product)
+                .where('companyId = :companyId', { companyId })
+                .execute();
+            await transactionalEntityManager.createQueryBuilder()
+                .delete()
+                .from(category_entity_1.Category)
+                .where('companyId = :companyId', { companyId })
+                .execute();
+            for (const item of template) {
+                await this.create(item, companyId, transactionalEntityManager);
+            }
+        });
     }
 };
 exports.InventoryService = InventoryService;

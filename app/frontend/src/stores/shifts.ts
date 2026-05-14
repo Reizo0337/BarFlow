@@ -14,6 +14,16 @@ export const useShiftsStore = defineStore('shifts', () => {
     const dailyHours = ref(0)
     const isLoading = ref(false)
 
+    const now = ref(new Date())
+    let timer: any = null
+
+    const initTimer = () => {
+        if (timer) return
+        timer = setInterval(() => {
+            now.value = new Date()
+        }, 1000)
+    }
+
     const fetchCurrentShift = async () => {
         isLoading.value = true
         try {
@@ -22,6 +32,8 @@ export const useShiftsStore = defineStore('shifts', () => {
             
             const hoursResponse = await api.get('/shifts/daily-hours')
             dailyHours.value = hoursResponse.data
+
+            initTimer()
         } catch (error) {
             console.error('Error fetching current shift or daily hours:', error)
         } finally {
@@ -66,8 +78,10 @@ export const useShiftsStore = defineStore('shifts', () => {
         currentShift,
         dailyHours,
         isLoading,
+        now,
         fetchCurrentShift,
         startShift,
-        endShift
+        endShift,
+        initTimer
     }
 })

@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   UserPlus,
   Search,
-  ArrowLeft
+  ArrowLeft,
+  Clock
 } from 'lucide-vue-next'
 import api from '@/services/api'
 import { useUIStore } from '@/stores/ui'
@@ -22,6 +23,7 @@ import AppDialog from '@/components/ui/AppDialog.vue'
 import FiscalConfig from '@/components/admin/FiscalConfig.vue'
 import EmployeeManagement from '@/components/admin/EmployeeManagement.vue'
 import EmployeeModal from '@/components/admin/EmployeeModal.vue'
+import AttendanceManagement from '@/components/admin/AttendanceManagement.vue'
 
 const uiStore = useUIStore()
 const router = useRouter()
@@ -33,6 +35,7 @@ const showSuccess = ref(false)
 const sections = [
   { id: 'general', name: 'Fiscal y Sistema', icon: Settings, description: 'Configuración de datos legales, moneda e impuestos.' },
   { id: 'users', name: 'Empleados', icon: Users, description: 'Gestión de personal, permisos y claves PIN.' },
+  { id: 'shifts', name: 'Jornada Laboral', icon: Clock, description: 'Control de asistencia, horas y auditoría.' },
   { id: 'devices', name: 'Dispositivos', icon: Smartphone, description: 'Configuración de comanderos y terminales.' },
   { id: 'printers', name: 'Impresoras', icon: Printer, description: 'Configuración de tickets y zonas de impresión.' },
   { id: 'appearance', name: 'Apariencia', icon: Palette, description: 'Personalización de colores, logos y temas.' },
@@ -209,6 +212,7 @@ onUnmounted(() => {
         <div class="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar">
           <FiscalConfig v-if="activeSection === 'general'" :config="config" />
           <EmployeeManagement v-else-if="activeSection === 'users'" :employees="employees" @edit="openEditEmployee" @delete="deleteEmployee" @add="openAddEmployee" />
+          <AttendanceManagement v-else-if="activeSection === 'shifts'" />
           <div v-else class="h-full flex flex-col items-center justify-center text-foreground/20 italic space-y-4">
             <div class="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center border-4 border-dashed border-border">
               <component :is="sections.find(s => s.id === activeSection)?.icon" class="w-8 h-8 opacity-20" />

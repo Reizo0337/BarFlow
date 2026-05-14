@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Receipt, TrendingUp, TrendingDown, Eye, Download, Calendar, Loader2, Printer, Search, Filter, FileJson, X, CreditCard, Banknote } from 'lucide-vue-next'
+import { Receipt, TrendingUp, TrendingDown, Eye, Download, Calendar, Loader2, Printer, Search, Filter, FileJson, X, CreditCard, Banknote, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { useInvoicesStore } from '@/stores/invoices'
 import api from '@/services/api'
 import { generateTicketPDF } from '@/utils/pdf-generator'
@@ -19,6 +19,16 @@ const isDetailModalOpen = ref(false)
 const selectedInvoice = ref<any>(null)
 const isLoadingDetail = ref(false)
 const companySettings = ref<any>({})
+
+// --- Expense Creation ---
+const isExpenseModalOpen = ref(false)
+const isSubmittingExpense = ref(false)
+const expenseForm = ref({
+    amount: 0,
+    source: '',
+    paymentMethod: 'cash',
+    vatRate: 10
+})
 
 onMounted(async () => {
   invoicesStore.fetchInvoices()
@@ -42,6 +52,17 @@ const filteredInvoices = computed(() => {
   }
   return list
 })
+
+const currentPage = ref(1)
+const itemsPerPage = 15
+
+const paginatedInvoices = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredInvoices.value.slice(start, end)
+})
+
+const totalPages = computed(() => Math.ceil(filteredInvoices.value.length / itemsPerPage))
 
 const stats = computed(() => {
   const incomes = invoicesStore.invoices
@@ -103,6 +124,33 @@ const exportVerifactu = async (invoice: any) => {
   }
 }
 
+const handleCreateExpense = async () => {
+    if (!expenseForm.value.amount || !expenseForm.value.source) return
+    
+    isSubmittingExpense.value = true
+    try {
+        await api.post('/invoices', {
+            type: 'in',
+            amount: expenseForm.value.amount,
+            clientName: expenseForm.value.source,
+            paymentMethod: expenseForm.value.paymentMethod,
+            vatRate: expenseForm.value.vatRate,
+            series: 'G', // G for Gastos
+            terminalId: 'MANUAL'
+        })
+        
+        isExpenseModalOpen.value = false
+        expenseForm.value = { amount: 0, source: '', paymentMethod: 'cash', vatRate: 10 }
+        
+        // Refresh list
+        await invoicesStore.fetchInvoices()
+    } catch (error) {
+        console.error('Error creating expense:', error)
+    } finally {
+        isSubmittingExpense.value = false
+    }
+}
+
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('es-ES', { 
     day: '2-digit', 
@@ -132,26 +180,33 @@ const getStatusVariant = (status: string) => {
         <p class="text-foreground/40 font-bold italic mt-2">Registros inalterables y cumplimiento fiscal AEAT.</p>
       </div>
       
-      <div class="flex flex-wrap items-center gap-3">
-        <div class="relative">
-            <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/30" />
-            <input 
-                v-model="searchQuery"
-                type="text" 
-                placeholder="Buscar por nº o cliente..." 
-                class="pl-11 pr-4 py-3 bg-accent/10 border border-border rounded-2xl text-sm font-bold focus:border-primary transition-all w-64"
-            />
-        </div>
-        <div class="flex items-center gap-1 p-1.5 bg-accent/10 rounded-2xl border border-border">
-            <button 
-                v-for="type in (['all', 'out', 'in'] as const)" 
-                :key="type"
-                @click="activeType = type"
-                class="px-4 py-2 rounded-xl text-xs font-black uppercase transition-all"
-                :class="activeType === type ? 'bg-primary text-white shadow-lg' : 'text-foreground/40 hover:text-foreground'"
-            >
-                {{ type === 'all' ? 'Todo' : type === 'out' ? 'Ventas' : 'Compras' }}
-            </button>
+      <div class="flex flex-wrap items-center gap-4">
+        <BaseButton variant="destructive" @click="isExpenseModalOpen = true">
+            <template #icon-left><TrendingDown class="w-5 h-5" /></template>
+            Registrar Gasto
+        </BaseButton>
+        <div class="h-10 w-px bg-border hidden lg:block"></div>
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="relative">
+                <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/30" />
+                <input 
+                    v-model="searchQuery"
+                    type="text" 
+                    placeholder="Buscar por nº o cliente..." 
+                    class="pl-11 pr-4 py-3 bg-accent/10 border border-border rounded-2xl text-sm font-bold focus:border-primary transition-all w-64"
+                />
+            </div>
+            <div class="flex items-center gap-1 p-1.5 bg-accent/10 rounded-2xl border border-border">
+                <button 
+                    v-for="type in (['all', 'out', 'in'] as const)" 
+                    :key="type"
+                    @click="activeType = type"
+                    class="px-4 py-2 rounded-xl text-xs font-black uppercase transition-all"
+                    :class="activeType === type ? 'bg-primary text-white shadow-lg' : 'text-foreground/40 hover:text-foreground'"
+                >
+                    {{ type === 'all' ? 'Todo' : type === 'out' ? 'Ventas' : 'Compras' }}
+                </button>
+            </div>
         </div>
       </div>
     </div>
@@ -214,7 +269,7 @@ const getStatusVariant = (status: string) => {
                             No se encontraron registros para esta selección.
                         </td>
                     </tr>
-                    <tr v-for="inv in filteredInvoices" :key="inv.id" class="hover:bg-accent/5 transition-colors group">
+                    <tr v-for="inv in paginatedInvoices" :key="inv.id" class="hover:bg-accent/5 transition-colors group">
                         <td class="p-6">
                             <div class="flex items-center gap-4">
                                 <div 
@@ -253,6 +308,36 @@ const getStatusVariant = (status: string) => {
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Pagination Footer -->
+        <div class="p-6 border-t border-border flex flex-col md:flex-row items-center justify-between bg-accent/5 gap-4">
+            <p class="text-[10px] font-black uppercase tracking-widest text-foreground/30">
+                Mostrando {{ paginatedInvoices.length }} de {{ filteredInvoices.length }} registros
+            </p>
+            <div class="flex items-center gap-3">
+                <BaseButton 
+                    variant="outline" 
+                    size="sm" 
+                    :disabled="currentPage === 1"
+                    @click="currentPage--"
+                >
+                    <ChevronLeft class="w-4 h-4" />
+                </BaseButton>
+                
+                <div class="flex items-center gap-1">
+                    <span class="text-xs font-black px-2 uppercase tracking-tighter">PÁGINA {{ currentPage }} / {{ totalPages || 1 }}</span>
+                </div>
+
+                <BaseButton 
+                    variant="outline" 
+                    size="sm" 
+                    :disabled="currentPage >= totalPages"
+                    @click="currentPage++"
+                >
+                    <ChevronRight class="w-4 h-4" />
+                </BaseButton>
+            </div>
         </div>
     </div>
 
@@ -348,6 +433,96 @@ const getStatusVariant = (status: string) => {
                 <BaseButton variant="primary" class="flex-1 py-4" @click="exportVerifactu(selectedInvoice)">
                     <template #icon-left><Download class="w-5 h-5" /></template>
                     Exportar JSON AEAT
+                </BaseButton>
+            </div>
+        </div>
+    </div>
+
+    <!-- EXPENSE REGISTRATION MODAL -->
+    <div v-if="isExpenseModalOpen" class="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+        <div class="bg-card w-full max-w-lg rounded-[3rem] border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div class="p-8 border-b border-border bg-destructive/5 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-destructive/10 text-destructive rounded-2xl flex items-center justify-center">
+                        <TrendingDown class="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black tracking-tighter">Registrar Gasto</h3>
+                        <p class="text-xs font-bold text-foreground/40">Añadir factura de compra o gasto manual.</p>
+                    </div>
+                </div>
+                <button @click="isExpenseModalOpen = false" class="p-3 hover:bg-destructive/10 rounded-2xl transition-colors">
+                    <X class="w-6 h-6" />
+                </button>
+            </div>
+
+            <div class="p-8 space-y-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-foreground/30 ml-4">Origen / Proveedor / Concepto</label>
+                    <input 
+                        v-model="expenseForm.source"
+                        type="text" 
+                        placeholder="Ej: Factura Hielo, Alquiler, Luz..." 
+                        class="w-full bg-accent/10 border-2 border-transparent focus:border-destructive/50 focus:bg-card rounded-2xl px-6 py-4 font-bold outline-none transition-all"
+                    />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase tracking-widest text-foreground/30 ml-4">Importe Total</label>
+                        <div class="relative">
+                            <span class="absolute left-6 top-1/2 -translate-y-1/2 font-black text-foreground/20">€</span>
+                            <input 
+                                v-model.number="expenseForm.amount"
+                                type="number" 
+                                placeholder="0.00" 
+                                class="w-full bg-accent/10 border-2 border-transparent focus:border-destructive/50 focus:bg-card rounded-2xl pl-10 pr-6 py-4 font-black outline-none transition-all"
+                            />
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase tracking-widest text-foreground/30 ml-4">IVA (%)</label>
+                        <select 
+                            v-model.number="expenseForm.vatRate"
+                            class="w-full bg-accent/10 border-2 border-transparent focus:border-destructive/50 focus:bg-card rounded-2xl px-6 py-4 font-black outline-none transition-all appearance-none cursor-pointer"
+                        >
+                            <option :value="0">0% (Exento)</option>
+                            <option :value="4">4% (Superreducido)</option>
+                            <option :value="10">10% (Reducido)</option>
+                            <option :value="21">21% (General)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-foreground/30 ml-4">Método de Pago</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button 
+                            @click="expenseForm.paymentMethod = 'cash'"
+                            :class="expenseForm.paymentMethod === 'cash' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-accent/10 text-foreground/40'"
+                            class="py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                        >
+                            <Banknote class="w-4 h-4" /> Efectivo
+                        </button>
+                        <button 
+                            @click="expenseForm.paymentMethod = 'card'"
+                            :class="expenseForm.paymentMethod === 'card' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-accent/10 text-foreground/40'"
+                            class="py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                        >
+                            <CreditCard class="w-4 h-4" /> Tarjeta
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 bg-accent/5 border-t border-border">
+                <BaseButton 
+                    variant="destructive" 
+                    class="w-full py-5 text-lg" 
+                    :loading="isSubmittingExpense"
+                    @click="handleCreateExpense"
+                >
+                    Guardar Gasto
                 </BaseButton>
             </div>
         </div>

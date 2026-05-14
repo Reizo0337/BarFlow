@@ -31,19 +31,22 @@ export class InventoryService {
         });
     }
 
-    async findCategoryByName(name: string, companyId: number): Promise<Category | null> {
-        return this.categoryRepository.createQueryBuilder('category')
+    async findCategoryByName(name: string, companyId: number, manager?: any): Promise<Category | null> {
+        const repo = manager ? manager.getRepository(Category) : this.categoryRepository;
+        return repo.createQueryBuilder('category')
+            .innerJoin('category.company', 'company')
             .where('LOWER(category.name) = LOWER(:name)', { name })
-            .andWhere('category.companyId = :companyId', { companyId })
+            .andWhere('company.id = :companyId', { companyId })
             .getOne();
     }
 
-    async createCategory(name: string, companyId: number): Promise<Category> {
-        const category = this.categoryRepository.create({
+    async createCategory(name: string, companyId: number, manager?: any): Promise<Category> {
+        const repo = manager ? manager.getRepository(Category) : this.categoryRepository;
+        const category = repo.create({
             name,
             company: { id: companyId } as any
         });
-        return this.categoryRepository.save(category);
+        return repo.save(category);
     }
 
     async updateCategory(id: number, name: string, companyId: number): Promise<Category | null> {
@@ -62,19 +65,19 @@ export class InventoryService {
         });
     }
 
-    async create(createProductDto: CreateProductDto | any, companyId: number): Promise<Product> {
+    async create(createProductDto: CreateProductDto | any, companyId: number, manager?: any): Promise<Product> {
         let categoryId = createProductDto.categoryId;
         const catName = createProductDto.categoryName || (typeof createProductDto.category === 'string' ? createProductDto.category : null);
 
         if (catName) {
-            let category = await this.findCategoryByName(catName, companyId);
+            let category = await this.findCategoryByName(catName, companyId, manager);
             if (!category) {
-                category = await this.createCategory(catName, companyId);
+                category = await this.createCategory(catName, companyId, manager);
             }
             categoryId = category.id;
         }
 
-        const { category, categoryName, ...rest } = createProductDto;
+        const { category, categoryName, categoryId: dtoCategoryId, ...rest } = createProductDto;
 
         // Support for template image field names
         if (!rest.image && rest.imageUrl) {
@@ -85,7 +88,8 @@ export class InventoryService {
             rest.image = await this.fileService.downloadAndSaveImage(rest.image, this.uploadDir);
         }
 
-        return this.productRepository.save({
+        const repo = manager ? manager.getRepository(Product) : this.productRepository;
+        return repo.save({
             ...rest,
             category: categoryId ? { id: categoryId } : null,
             company: { id: companyId } as any
@@ -172,15 +176,26 @@ export class InventoryService {
     }
 
     async applyTemplate(template: any[], companyId: number): Promise<void> {
-        // 1. Delete all existing products for this company
-        await this.productRepository.delete({ company: { id: companyId } as any });
+        // Use a transaction for the entire operation
+        await this.productRepository.manager.transaction(async transactionalEntityManager => {
+            // 1. Delete all existing products for this company
+            await transactionalEntityManager.createQueryBuilder()
+                .delete()
+                .from(Product)
+                .where('companyId = :companyId', { companyId })
+                .execute();
 
-        // 2. Delete all existing categories for this company
-        await this.categoryRepository.delete({ company: { id: companyId } as any });
+            // 2. Delete all existing categories for this company
+            await transactionalEntityManager.createQueryBuilder()
+                .delete()
+                .from(Category)
+                .where('companyId = :companyId', { companyId })
+                .execute();
 
-        // 3. Iterate and create each product from template
-        for (const item of template) {
-            await this.create(item, companyId);
-        }
+            // 3. Iterate and create each product from template
+            for (const item of template) {
+                await this.create(item, companyId, transactionalEntityManager);
+            }
+        });
     }
 }

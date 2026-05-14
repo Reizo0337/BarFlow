@@ -7,4 +7,5 @@ export declare class ShiftsController {
     getCurrentShift(req: any): Promise<import("./shift.entity").Shift | null>;
     getCompanyShifts(req: any): Promise<import("./shift.entity").Shift[]>;
     getDailyHours(req: any): Promise<number>;
+    updateShift(req: any, body: any, id: string): Promise<import("./shift.entity").Shift>;
 }

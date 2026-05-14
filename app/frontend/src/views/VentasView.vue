@@ -13,7 +13,12 @@ import {
     Maximize2,
     Minimize2,
     Layers,
-    ArrowLeft
+    ArrowLeft,
+    ChevronLeft,
+    ChevronRight,
+    ArrowRight,
+    FilePlus,
+    ListTree
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
@@ -31,6 +36,7 @@ import TableSelectorModal from '@/components/ventas/TableSelectorModal.vue'
 import CheckoutModal from '@/components/ventas/CheckoutModal.vue'
 import SuccessModal from '@/components/ventas/SuccessModal.vue'
 import AppDialog from '@/components/ui/AppDialog.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 
 const inventoryStore = useInventoryStore()
 const uiStore = useUIStore()
@@ -60,6 +66,7 @@ const isManualProductModalOpen = ref(false)
 const isTableSelectorOpen = ref(false)
 const isCheckoutModalOpen = ref(false)
 const isSuccessModalOpen = ref(false)
+const isOpenSalesModalOpen = ref(false)
 
 // Misc State
 const selectedTable = ref('01')
@@ -67,6 +74,11 @@ const isSwitching = ref(false)
 const tables = Array.from({ length: 24 }, (_, i) => (i + 1).toString().padStart(2, '0'))
 const currency = ref('€')
 const companySettings = ref<any>({})
+
+// --- Historical Navigation ---
+const recentInvoices = ref<any[]>([])
+const viewingInvoiceIndex = ref<number | null>(null) // null = active order
+const viewingInvoice = computed(() => viewingInvoiceIndex.value !== null ? recentInvoices.value[viewingInvoiceIndex.value] : null)
 
 // IMAGE CACHE TRACKER is now handled by inventoryStore globally
 
@@ -97,6 +109,7 @@ onMounted(async () => {
         await inventoryStore.fetchProducts()
     }
     await tablesStore.fetchPendingOrders()
+    await fetchRecentInvoices()
     
     if (tablesStore.pendingOrders[selectedTable.value]) {
         cart.value = [...tablesStore.pendingOrders[selectedTable.value]]
@@ -104,6 +117,121 @@ onMounted(async () => {
 
     // PRELOADER REMOVED to avoid CPU congestion during interactions
 })
+
+const fetchRecentInvoices = async () => {
+    try {
+        const res = await api.get('/invoices')
+        // Sort by date desc
+        recentInvoices.value = res.data.sort((a: any, b: any) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ).slice(0, 50) // Keep last 50
+    } catch (e) {
+        console.error('Error fetching invoices:', e)
+    }
+}
+
+const navQueue = computed(() => {
+    const queue: any[] = []
+    
+    // Get all pending keys (including current selectedTable)
+    const pendingKeys = Object.keys(tablesStore.pendingOrders)
+    if (!pendingKeys.includes(selectedTable.value)) {
+        pendingKeys.push(selectedTable.value)
+    }
+    
+    // Sort keys so the order is stable during navigation
+    pendingKeys.sort((a, b) => a.localeCompare(b))
+    
+    queue.push(...pendingKeys.map(k => ({ type: 'pending', id: k })))
+    
+    // 3. Recent Invoices
+    const invoices = recentInvoices.value.map(inv => ({ type: 'invoice', id: inv.id }))
+    queue.push(...invoices)
+    
+    return queue
+})
+
+const currentNavIndex = computed(() => {
+    if (viewingInvoiceIndex.value !== null) {
+        const inv = recentInvoices.value[viewingInvoiceIndex.value]
+        if (!inv) return 0
+        return navQueue.value.findIndex(item => item.type === 'invoice' && item.id === inv.id)
+    }
+    // Find index of current selectedTable in the pending section
+    const idx = navQueue.value.findIndex(item => item.type === 'pending' && item.id === selectedTable.value)
+    return idx !== -1 ? idx : 0
+})
+
+const navigateInvoices = async (direction: 'prev' | 'next') => {
+    // Ensure we have latest invoices before navigating if needed
+    if (recentInvoices.value.length === 0) await fetchRecentInvoices()
+    
+    const idx = currentNavIndex.value
+    let targetIdx = idx
+    
+    if (direction === 'prev') {
+        if (idx < navQueue.value.length - 1) targetIdx++
+    } else {
+        if (idx > 0) targetIdx--
+    }
+    
+    if (targetIdx === idx) return
+    
+    const target = navQueue.value[targetIdx]
+    
+    if (target.type === 'pending') {
+        viewingInvoiceIndex.value = null
+        if (target.id !== selectedTable.value) {
+            await openPendingSale(target.id)
+        }
+    } else if (target.type === 'invoice') {
+        // Find invoice index in recentInvoices
+        const invIdx = recentInvoices.value.findIndex(inv => inv.id === target.id)
+        if (invIdx !== -1) {
+            viewingInvoiceIndex.value = invIdx
+            // When viewing invoice, we might want to "stop" showing the current table's cart
+            // The template already handles this via viewingInvoiceIndex !== null
+        }
+    }
+}
+
+const backToActiveOrder = () => {
+    viewingInvoiceIndex.value = null
+}
+
+const createGenericSale = async () => {
+    // Generate a unique ID for this generic sale
+    const timestamp = Date.now().toString().slice(-4)
+    const newId = `TICK-${timestamp}`
+    
+    // Save current if needed
+    if (cart.value.length > 0) {
+        await tablesStore.saveTableOrder(selectedTable.value, cart.value, cartTotal.value)
+    }
+    
+    selectedTable.value = newId
+    cart.value = []
+}
+
+const openPendingSale = async (tableNumber: string) => {
+    if (tableNumber === selectedTable.value) {
+        isOpenSalesModalOpen.value = false
+        return
+    }
+
+    if (cart.value.length > 0) {
+        await tablesStore.saveTableOrder(selectedTable.value, cart.value, cartTotal.value)
+    }
+    
+    selectedTable.value = tableNumber
+    cart.value = [...(tablesStore.pendingOrders[tableNumber] || [])]
+    isOpenSalesModalOpen.value = false
+}
+
+const isTable = (tableNumber: string) => {
+    return !isNaN(Number(tableNumber)) && tableNumber.length <= 2
+}
+
 
 onUnmounted(() => {
     uiStore.isZenMode = false
@@ -281,12 +409,21 @@ const handleCheckout = async (data: { paymentMethod: string, shouldPrintTicket: 
         }
         await tablesStore.clearTableOrder(selectedTable.value)
         isCheckoutModalOpen.value = false
-        isSuccessModalOpen.value = true
+        // isSuccessModalOpen.value = true // REMOVED as requested
+        
+        // Refresh history
+        await fetchRecentInvoices()
+        
+        clearCart()
+        activeTab.value = 'products'
+        
+        /* 
         setTimeout(() => {
             isSuccessModalOpen.value = false
             clearCart()
             activeTab.value = 'products'
         }, 2000)
+        */
     } catch (error) {
         console.error('Checkout error:', error)
         dialog.value = {
@@ -324,7 +461,7 @@ watch(cart, (newCart) => {
                 </button>
                 <div class="flex flex-col">
                     <h1 class="text-sm font-black uppercase tracking-widest text-primary">Terminal de Ventas</h1>
-                    <p class="text-[10px] font-bold text-foreground/40 italic">BarFlow POS • Mesa #{{ selectedTable }}</p>
+                    <p class="text-[10px] font-bold text-foreground/40 italic">BarFlow POS • {{ isTable(selectedTable) ? 'Mesa' : 'Pedido' }} #{{ selectedTable }}</p>
                 </div>
             </div>
             
@@ -347,7 +484,7 @@ watch(cart, (newCart) => {
                     <LayoutGrid class="w-5 h-5" /> Productos
                 </button>
                 <button @click="activeTab = 'cart'" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all relative" :class="activeTab === 'cart' ? 'bg-card text-primary shadow-sm' : 'text-foreground/40'">
-                    <ReceiptText class="w-5 h-5" /> Mesa #{{ selectedTable }}
+                    <ReceiptText class="w-5 h-5" /> {{ isTable(selectedTable) ? 'Mesa' : 'Pedido' }} #{{ selectedTable }}
                     <span v-if="cartCount > 0" class="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-[10px] flex items-center justify-center rounded-full border-2 border-background">
                         {{ cartCount }}
                     </span>
@@ -412,21 +549,91 @@ watch(cart, (newCart) => {
 
             <!-- Sidebar: Order Review -->
             <aside class="w-full lg:w-72 xl:w-80 flex flex-col bg-card rounded-3xl border border-border shadow-xl overflow-hidden transition-all duration-300" :class="activeTab === 'products' ? 'hidden lg:flex' : 'flex flex-1'">
-                <div class="p-4 lg:p-6 border-b border-border flex items-center justify-between bg-accent/10">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                            <ShoppingCart class="w-6 h-6 text-white" />
+                
+                <!-- HEADER: NAVIGATION & TABLE -->
+                <div class="flex flex-col border-b border-border bg-accent/5">
+                    <!-- ARROWS & SALE NUMBER -->
+                    <div class="p-4 flex items-center justify-between border-b border-border/50">
+                        <div class="flex items-center gap-2">
+                            <button 
+                                @click="createGenericSale" 
+                                class="w-10 h-10 flex items-center justify-center rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all active:scale-95 shadow-sm"
+                                title="Nueva Venta Rápida"
+                            >
+                                <Plus class="w-5 h-5" />
+                            </button>
+                            <button 
+                                @click="isOpenSalesModalOpen = true" 
+                                class="w-10 h-10 flex items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white transition-all active:scale-95 shadow-sm"
+                                title="Lista de Ventas Abiertas"
+                            >
+                                <ListTree class="w-5 h-5" />
+                            </button>
                         </div>
-                        <div>
-                            <h2 class="font-black text-lg">Mesa #{{ selectedTable }}</h2>
-                            <button @click="isTableSelectorOpen = true" class="text-[10px] lg:text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1 hover:underline">
-                                Cambiar Mesa <ChevronDown class="w-3 h-3" />
+
+                        <div class="flex items-center bg-accent/20 rounded-2xl p-1 shadow-inner gap-2">
+                            <button 
+                                @click="navigateInvoices('prev')" 
+                                class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent/50 transition-colors text-foreground/40 disabled:opacity-20"
+                                :disabled="currentNavIndex >= navQueue.length - 1"
+                            >
+                                <ChevronLeft class="w-5 h-5" />
+                            </button>
+                            
+                            <div class="px-2 min-w-[100px] text-center">
+                                <span v-if="viewingInvoiceIndex !== null" class="text-[10px] font-black text-primary uppercase tracking-tighter">Ticket #{{ viewingInvoice.id }}</span>
+                                <span v-else-if="currentNavIndex > 0" class="text-[10px] font-black text-amber-500 uppercase tracking-tighter">Pedido {{ selectedTable }}</span>
+                                <span v-else class="text-[10px] font-black text-foreground/40 uppercase tracking-tighter">Venta Actual</span>
+                            </div>
+
+                            <button 
+                                @click="navigateInvoices('next')" 
+                                class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent/50 transition-colors text-foreground/40 disabled:opacity-20"
+                                :disabled="currentNavIndex === 0"
+                            >
+                                <ChevronRight class="w-5 h-5" />
                             </button>
                         </div>
                     </div>
-                    <button @click="clearCart" class="text-foreground/30 hover:text-destructive transition-colors p-2">
-                        <Trash2 class="w-5 h-5" />
-                    </button>
+
+                    <!-- TABLE INFO SECTION (CLICKABLE) -->
+                    <div 
+                        v-if="viewingInvoiceIndex === null" 
+                        @click="isTableSelectorOpen = true"
+                        class="p-4 flex items-center justify-between border-t border-border/50 cursor-pointer hover:bg-primary/5 transition-all group relative overflow-hidden"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-white font-black shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+                                {{ isTable(selectedTable) ? 'M' : 'P' }}
+                            </div>
+                            <div>
+                                <h3 class="font-black text-[10px] uppercase tracking-widest text-foreground/40 leading-none mb-1">
+                                    {{ isTable(selectedTable) ? 'Mesa' : 'Pedido' }}
+                                </h3>
+                                <div class="flex items-center gap-2">
+                                    <p class="text-2xl font-black text-foreground tracking-tighter">#{{ selectedTable }}</p>
+                                    <ChevronDown class="w-4 h-4 text-primary opacity-40 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Separate Delete Button (Not part of header click) -->
+                        <button 
+                            @click.stop="clearCart" 
+                            class="w-10 h-10 flex items-center justify-center text-foreground/20 hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                            title="Borrar todo el pedido"
+                        >
+                            <Trash2 class="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <!-- HISTORICAL BANNER -->
+                    <div v-else class="bg-primary px-4 py-2 flex items-center justify-between animate-in slide-in-from-top-2 duration-300">
+                        <span class="text-[10px] font-black text-white uppercase tracking-widest">Modo Histórico</span>
+                        <button @click="backToActiveOrder" class="text-[10px] font-black text-white bg-white/20 px-2 py-1 rounded flex items-center gap-1 hover:bg-white/30 transition-all">
+                            VOLVER <ArrowRight class="w-3 h-3" />
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- QUICK ACTIONS -->
@@ -440,42 +647,111 @@ watch(cart, (newCart) => {
                 </div>
 
                 <div class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar min-h-0">
-                    <div v-if="cart.length === 0" class="h-full flex flex-col items-center justify-center text-foreground/30 space-y-4">
-                        <Plus class="w-12 h-12 opacity-20" />
-                        <p class="text-sm font-medium italic text-center px-6">El pedido está vacío.</p>
-                    </div>
+                    <!-- ACTIVE ORDER CART -->
+                    <template v-if="viewingInvoiceIndex === null">
+                        <div v-if="cart.length === 0" class="h-full flex flex-col items-center justify-center text-foreground/30 space-y-4">
+                            <Plus class="w-12 h-12 opacity-20" />
+                            <p class="text-sm font-medium italic text-center px-6">El pedido está vacío.</p>
+                        </div>
 
-                    <div v-for="item in cart" :key="item.id" class="flex items-center gap-3 lg:gap-4 p-2 lg:p-3 rounded-2xl bg-accent/20 border border-transparent hover:border-primary/20 transition-all group">
-                        <img :src="inventoryStore.resolveImageUrl(item.image)" class="w-12 h-12 lg:w-14 lg:h-14 rounded-xl object-cover">
-                        <div class="flex-1 min-w-0">
-                            <h4 class="font-bold text-xs lg:text-sm truncate">{{ item.name }}</h4>
-                            <p class="text-primary font-black text-xs lg:text-sm">{{ currency }}{{ Number(item.price).toFixed(2) }}</p>
+                        <div v-for="item in cart" :key="item.id" class="flex items-center gap-3 lg:gap-4 p-2 lg:p-3 rounded-2xl bg-accent/20 border border-transparent hover:border-primary/20 transition-all group">
+                            <img :src="inventoryStore.resolveImageUrl(item.image)" class="w-12 h-12 lg:w-14 lg:h-14 rounded-xl object-cover">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-bold text-xs lg:text-sm truncate">{{ item.name }}</h4>
+                                <p class="text-primary font-black text-xs lg:text-sm">{{ currency }}{{ Number(item.price).toFixed(2) }}</p>
+                            </div>
+                            <div class="flex items-center gap-2 lg:gap-3">
+                                <button @click="removeFromCart(item.id)" class="w-7 h-7 rounded-lg bg-card border border-border flex items-center justify-center hover:bg-destructive hover:text-white transition-all active:scale-90"><Minus class="w-3 h-3" /></button>
+                                <span class="font-black text-base lg:text-lg min-w-[1rem] text-center">{{ item.quantity }}</span>
+                                <button @click="addToCart(item)" class="w-7 h-7 rounded-lg bg-card border border-border flex items-center justify-center hover:bg-primary hover:text-white transition-all active:scale-90"><Plus class="w-3 h-3" /></button>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-2 lg:gap-3">
-                            <button @click="removeFromCart(item.id)" class="w-7 h-7 rounded-lg bg-card border border-border flex items-center justify-center hover:bg-destructive hover:text-white transition-all active:scale-90"><Minus class="w-3 h-3" /></button>
-                            <span class="font-black text-base lg:text-lg min-w-[1rem] text-center">{{ item.quantity }}</span>
-                            <button @click="addToCart(item)" class="w-7 h-7 rounded-lg bg-card border border-border flex items-center justify-center hover:bg-primary hover:text-white transition-all active:scale-90"><Plus class="w-3 h-3" /></button>
+                    </template>
+
+                    <!-- HISTORICAL ORDER VIEW -->
+                    <template v-else>
+                        <div v-for="item in viewingInvoice.items" :key="item.id" class="flex items-center gap-3 lg:gap-4 p-2 lg:p-3 rounded-2xl bg-accent/10 border border-border/50 opacity-80">
+                            <div class="w-12 h-12 lg:w-14 lg:h-14 rounded-xl bg-primary/5 flex items-center justify-center text-primary font-black">
+                                {{ item.quantity }}x
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-bold text-xs lg:text-sm truncate">{{ item.productName || item.name }}</h4>
+                                <p class="text-primary font-black text-xs lg:text-sm">{{ currency }}{{ Number(item.price).toFixed(2) }}</p>
+                            </div>
                         </div>
-                    </div>
+                        <div class="p-3 rounded-2xl border-2 border-dashed border-border/50 text-center bg-accent/5">
+                            <p class="text-[10px] font-bold text-foreground/40 uppercase tracking-tighter">Venta finalizada el {{ new Date(viewingInvoice.createdAt).toLocaleString() }}</p>
+                        </div>
+                    </template>
                 </div>
 
                 <div class="p-4 lg:p-6 bg-accent/10 border-t border-border space-y-3 lg:space-y-4">
                     <div class="flex justify-between items-end pt-1 lg:pt-2">
                         <span class="font-bold text-base lg:text-lg">Total</span>
-                        <span class="font-black text-2xl lg:text-3xl text-primary">{{ currency }}{{ Number(cartTotal).toFixed(2) }}</span>
+                        <span class="font-black text-2xl lg:text-3xl text-primary">{{ currency }}{{ Number(viewingInvoiceIndex === null ? cartTotal : viewingInvoice.amount).toFixed(2) }}</span>
                     </div>
-                    <button @click="isCheckoutModalOpen = true" :disabled="cart.length === 0 || isProcessing" class="w-full py-4 lg:py-5 bg-primary text-white rounded-2xl lg:rounded-[1.5rem] font-black text-lg lg:text-xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-3">
-                        Cobrar <CircleDollarSign class="w-5 h-5" />
-                    </button>
+                    
+                    <template v-if="viewingInvoiceIndex === null">
+                        <button @click="isCheckoutModalOpen = true" :disabled="cart.length === 0 || isProcessing" class="w-full py-4 lg:py-5 bg-primary text-white rounded-2xl lg:rounded-[1.5rem] font-black text-lg lg:text-xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-3">
+                            Cobrar <CircleDollarSign class="w-5 h-5" />
+                        </button>
+                    </template>
+                    <template v-else>
+                        <button @click="generateTicketPDF(viewingInvoice, viewingInvoice.items, companySettings, currency)" class="w-full py-4 lg:py-5 bg-foreground text-background rounded-2xl lg:rounded-[1.5rem] font-black text-lg lg:text-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
+                            Re-imprimir Ticket <ReceiptText class="w-5 h-5" />
+                        </button>
+                    </template>
                 </div>
             </aside>
         </div>
 
         <!-- Modals -->
         <ManualProductModal :is-open="isManualProductModalOpen" @close="isManualProductModalOpen = false" @add="addManualToCart" />
-        <TableSelectorModal :is-open="isTableSelectorOpen" :selected-table="selectedTable" :tables="tables" :pending-orders="tablesStore.pendingOrders" @close="isTableSelectorOpen = false" @select="switchTable" />
+        <TableSelectorModal :is-open="isTableSelectorOpen" :selected-table="selectedTable" :pending-orders="tablesStore.pendingOrders" @close="isTableSelectorOpen = false" @select="switchTable" />
         <CheckoutModal :is-open="isCheckoutModalOpen" :cart="cart" :cart-total="cartTotal" :currency="currency" :is-processing="isProcessing" @close="isCheckoutModalOpen = false" @checkout="handleCheckout" />
         <SuccessModal :is-open="isSuccessModalOpen" />
+        
+        <!-- OPEN SALES MODAL -->
+        <AppDialog 
+            :is-open="isOpenSalesModalOpen" 
+            title="Ventas y Mesas Abiertas" 
+            @close="isOpenSalesModalOpen = false"
+        >
+            <div class="space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar py-2">
+                <div v-if="Object.keys(tablesStore.pendingOrders).length === 0" class="py-10 text-center text-foreground/20 italic">
+                    No hay ventas pendientes en este momento.
+                </div>
+                <div 
+                    v-for="(items, tableId) in tablesStore.pendingOrders" 
+                    :key="tableId"
+                    @click="openPendingSale(tableId)"
+                    class="p-4 rounded-2xl border border-border bg-accent/5 hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer group flex items-center justify-between"
+                    :class="tableId === selectedTable ? 'ring-2 ring-primary bg-primary/5' : ''"
+                >
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl flex items-center justify-center font-black" :class="isTable(tableId) ? 'bg-primary text-white' : 'bg-emerald-500 text-white'">
+                            {{ isTable(tableId) ? 'M' : 'P' }}
+                        </div>
+                        <div>
+                            <h4 class="font-black text-sm uppercase tracking-tight">
+                                {{ isTable(tableId) ? 'Mesa' : 'Pedido' }} #{{ tableId }}
+                            </h4>
+                            <p class="text-[10px] font-bold text-foreground/30 uppercase tracking-widest">
+                                {{ items.length }} productos • {{ items.reduce((acc, i) => acc + i.quantity, 0) }} uds.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-lg font-black text-primary">
+                            {{ currency }}{{ items.reduce((acc, i) => acc + (i.price * i.quantity), 0).toFixed(2) }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <template #footer>
+                <BaseButton variant="secondary" @click="isOpenSalesModalOpen = false" class="w-full">Cerrar</BaseButton>
+            </template>
+        </AppDialog>
         
         <AppDialog 
             :is-open="dialog.isOpen"

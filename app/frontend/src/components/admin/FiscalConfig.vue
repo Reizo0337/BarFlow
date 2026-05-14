@@ -55,13 +55,6 @@ const props = defineProps<{
             <input v-model.number="config.vatRate" type="number" step="0.1" class="w-full bg-accent/20 border-none rounded-2xl px-5 py-3 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all">
           </div>
         </div>
-        <div class="space-y-2">
-          <label class="text-[10px] font-black uppercase tracking-widest text-foreground/40 px-2">Próxima Factura #</label>
-          <div class="relative">
-            <Hash class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/20" />
-            <input v-model.number="config.nextInvoiceNumber" type="number" class="w-full bg-accent/20 border-none rounded-2xl px-5 py-3 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-          </div>
-        </div>
       </div>
 
       <div class="p-5 bg-indigo-500/5 rounded-3xl border border-indigo-500/10 flex items-start gap-4">

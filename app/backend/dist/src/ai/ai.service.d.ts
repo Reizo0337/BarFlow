@@ -9,4 +9,7 @@ export declare class AiService {
     constructor(inventoryService: InventoryService, smartImageService: SmartImageService);
     processCommand(text: string, companyId: number, history?: any[]): Promise<any[]>;
     private executeAction;
+    generateStatsSummary(stats: any, companyId: number): Promise<{
+        summary: any;
+    }>;
 }

@@ -11,17 +11,25 @@ import {
     DollarSign,
     CreditCard,
     ChevronRight,
-    Loader2
+    Loader2,
+    ChevronLeft,
+    FileSpreadsheet,
+    Download,
+    Eye
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import AppDialog from '@/components/ui/AppDialog.vue'
 import { useUIStore } from '@/stores/ui'
+import { useTablesStore } from '@/stores/tables'
+import BaseCard from '@/components/ui/BaseCard.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 
 import { generateClosingPDF } from '@/utils/pdf-generator'
 
 const router = useRouter()
 const uiStore = useUIStore()
+const tablesStore = useTablesStore()
 
 // State
 const stats = ref<any>(null)
@@ -31,6 +39,17 @@ const isLoading = ref(true)
 const isClosing = ref(false)
 const activeTab = ref<'current' | 'history'>('current')
 const companySettings = ref<any>({})
+
+const currentPage = ref(1)
+const itemsPerPage = 15
+
+const paginatedHistory = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage
+    const end = start + itemsPerPage
+    return history.value.slice(start, end)
+})
+
+const totalPages = computed(() => Math.ceil(history.value.length / itemsPerPage))
 
 // Dialog State
 const dialog = ref({
@@ -72,7 +91,7 @@ onMounted(async () => {
     uiStore.toggleZenMode(false)
     uiStore.isSidebarCollapsed = true
     
-    await Promise.all([fetchStats(), fetchHistory(), fetchSettings()])
+    await Promise.all([fetchStats(), fetchHistory(), fetchSettings(), tablesStore.fetchPendingOrders()])
     isLoading.value = false
 })
 
@@ -90,6 +109,19 @@ const downloadClosingTicket = (closing: any, type: 'simple' | 'detailed') => {
 }
 
 const handleClosing = async () => {
+    // SECURITY CHECK: No pending orders allowed
+    const pendingOrdersCount = Object.keys(tablesStore.pendingOrders).length
+    if (pendingOrdersCount > 0) {
+        dialog.value = {
+            isOpen: true,
+            title: 'Ventas Pendientes Detectadas',
+            message: `No se puede realizar el cierre Z porque hay ${pendingOrdersCount} mesas o pedidos con productos sin cobrar. Por favor, finaliza o anula todas las ventas abiertas antes de proceder.`,
+            type: 'error',
+            onConfirm: () => dialog.value.isOpen = false
+        }
+        return
+    }
+
     dialog.value = {
         isOpen: true,
         title: 'Confirmar Cierre de Caja (Z)',
@@ -307,49 +339,83 @@ const handleClosing = async () => {
 
         <!-- History Tab -->
         <div v-else class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="close in history" :key="close.id" class="bg-card border border-border rounded-3xl p-6 hover:border-primary/30 transition-all group">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-                            <History class="w-6 h-6" />
-                        </div>
-                        <span class="px-3 py-1 bg-accent/20 rounded-full text-[10px] font-black uppercase tracking-widest text-foreground/40">Z #{{ close.closingNumber }}</span>
-                    </div>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <p class="text-[10px] font-black text-foreground/30 uppercase tracking-widest">Fecha y Hora</p>
-                            <p class="font-bold">{{ new Date(close.timestamp).toLocaleString() }}</p>
-                        </div>
-                        
-                        <div class="flex justify-between border-t border-border pt-4">
-                            <div>
-                                <p class="text-[10px] font-black text-foreground/30 uppercase tracking-widest">Total</p>
-                                <p class="text-xl font-black text-primary">€{{ close.totalAmount.toFixed(2) }}</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-[10px] font-black text-foreground/30 uppercase tracking-widest">Usuario</p>
-                                <p class="font-bold">{{ close.user?.name }}</p>
-                            </div>
-                        </div>
+            <BaseCard padding="none" :hover="false" class="shadow-2xl overflow-hidden min-h-[500px] flex flex-col border-border">
+                <div class="p-6 border-b border-border bg-accent/5 flex items-center justify-between">
+                    <h3 class="text-xs font-black uppercase tracking-[0.2em] text-foreground/40">Registros Z Consolidados</h3>
+                </div>
+                
+                <div class="flex-1 overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-accent/5 border-b border-border">
+                                <th class="p-6 text-[10px] font-black uppercase tracking-widest text-foreground/30">Número Z</th>
+                                <th class="p-6 text-[10px] font-black uppercase tracking-widest text-foreground/30">Fecha de Cierre</th>
+                                <th class="p-6 text-[10px] font-black uppercase tracking-widest text-foreground/30">Responsable</th>
+                                <th class="p-6 text-[10px] font-black uppercase tracking-widest text-foreground/30 text-right">Total Bruto</th>
+                                <th class="p-6 text-[10px] font-black uppercase tracking-widest text-foreground/30 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border/50">
+                            <tr v-if="history.length === 0">
+                                <td colspan="5" class="p-20 text-center text-foreground/20 italic font-bold">
+                                    No hay registros históricos de cierre.
+                                </td>
+                            </tr>
+                            <tr v-for="close in paginatedHistory" :key="close.id" class="hover:bg-accent/5 transition-colors group">
+                                <td class="p-6">
+                                    <span class="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest">Z #{{ close.closingNumber }}</span>
+                                </td>
+                                <td class="p-6">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-bold">{{ new Date(close.timestamp).toLocaleDateString() }}</span>
+                                        <span class="text-[10px] font-black text-foreground/30 uppercase">{{ new Date(close.timestamp).toLocaleTimeString() }}</span>
+                                    </div>
+                                </td>
+                                <td class="p-6">
+                                    <span class="text-sm font-bold text-foreground/60">{{ close.user?.name || 'Sistema' }}</span>
+                                </td>
+                                <td class="p-6 text-right">
+                                    <span class="text-xl font-black tracking-tighter text-primary">€{{ Number(close.totalAmount).toFixed(2) }}</span>
+                                </td>
+                                <td class="p-6 text-right">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <BaseButton variant="ghost" size="icon" @click="downloadClosingTicket(close, 'simple')" title="Ticket Simple"><ReceiptText class="w-4 h-4" /></BaseButton>
+                                        <BaseButton variant="ghost" size="icon" @click="downloadClosingTicket(close, 'detailed')" title="Reporte Detallado"><FileSpreadsheet class="w-4 h-4 text-emerald-500" /></BaseButton>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                        <div class="grid grid-cols-2 gap-2 pt-2">
-                            <button 
-                                @click="downloadClosingTicket(close, 'simple')"
-                                class="flex items-center justify-center gap-2 py-3 rounded-xl border border-primary/20 text-primary font-bold text-[10px] uppercase hover:bg-primary/5 transition-all"
-                            >
-                                Ticket Simple
-                            </button>
-                            <button 
-                                @click="downloadClosingTicket(close, 'detailed')"
-                                class="flex items-center justify-center gap-2 py-3 rounded-xl bg-primary/10 text-primary font-bold text-[10px] uppercase hover:bg-primary hover:text-white transition-all"
-                            >
-                                Detallado
-                            </button>
-                        </div>
+                <!-- Pagination Footer -->
+                <div class="p-6 border-t border-border flex flex-col md:flex-row items-center justify-between bg-accent/5 gap-4">
+                    <p class="text-[10px] font-black uppercase tracking-widest text-foreground/30">
+                        Total: {{ history.length }} reportes fiscales
+                    </p>
+                    <div class="flex items-center gap-3">
+                        <BaseButton 
+                            variant="outline" 
+                            size="sm" 
+                            :disabled="currentPage === 1"
+                            @click="currentPage--"
+                        >
+                            <ChevronLeft class="w-4 h-4" />
+                        </BaseButton>
+                        
+                        <span class="text-xs font-black px-2 uppercase tracking-tighter">PÁGINA {{ currentPage }} / {{ totalPages || 1 }}</span>
+
+                        <BaseButton 
+                            variant="outline" 
+                            size="sm" 
+                            :disabled="currentPage >= totalPages"
+                            @click="currentPage++"
+                        >
+                            <ChevronRight class="w-4 h-4" />
+                        </BaseButton>
                     </div>
                 </div>
-            </div>
+            </BaseCard>
         </div>
 
         <!-- AppDialog -->

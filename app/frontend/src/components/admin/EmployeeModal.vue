@@ -14,7 +14,8 @@ const employeeForm = ref({
     name: '',
     role: 'waiter',
     pin: '',
-    avatar: ''
+    avatar: '',
+    contractedHours: 40
 })
 
 watch(() => props.isOpen, (val) => {
@@ -24,14 +25,16 @@ watch(() => props.isOpen, (val) => {
                 name: props.editingEmployee.name,
                 role: props.editingEmployee.role,
                 pin: '',
-                avatar: props.editingEmployee.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${props.editingEmployee.name}`
+                avatar: props.editingEmployee.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${props.editingEmployee.name}`,
+                contractedHours: props.editingEmployee.contractedHours || 40
             }
         } else {
             employeeForm.value = {
                 name: '',
                 role: 'waiter',
                 pin: '',
-                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`
+                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`,
+                contractedHours: 40
             }
         }
     }
@@ -74,10 +77,20 @@ const handleSave = () => {
 
             <div class="space-y-2">
               <label class="text-[10px] font-black uppercase tracking-widest text-foreground/40 px-2">Rol de Usuario</label>
-              <div class="grid grid-cols-2 gap-3">
-                <button @click="employeeForm.role = 'waiter'" class="py-3 rounded-xl font-black text-xs transition-all border-2" :class="employeeForm.role === 'waiter' ? 'bg-primary/10 border-primary text-primary' : 'bg-accent/10 border-transparent text-foreground/40'">Camarero</button>
-                <button @click="employeeForm.role = 'admin'" class="py-3 rounded-xl font-black text-xs transition-all border-2" :class="employeeForm.role === 'admin' ? 'bg-primary/10 border-primary text-primary' : 'bg-accent/10 border-transparent text-foreground/40'">Admin</button>
+              <div class="grid grid-cols-3 gap-3">
+                <button @click="employeeForm.role = 'waiter'" class="py-3 rounded-xl font-black text-[10px] transition-all border-2" :class="employeeForm.role === 'waiter' ? 'bg-primary/10 border-primary text-primary' : 'bg-accent/10 border-transparent text-foreground/40'">Camarero</button>
+                <button @click="employeeForm.role = 'supervisor'" class="py-3 rounded-xl font-black text-[10px] transition-all border-2" :class="employeeForm.role === 'supervisor' ? 'bg-primary/10 border-primary text-primary' : 'bg-accent/10 border-transparent text-foreground/40'">Encargado</button>
+                <button @click="employeeForm.role = 'admin'" class="py-3 rounded-xl font-black text-[10px] transition-all border-2" :class="employeeForm.role === 'admin' ? 'bg-primary/10 border-primary text-primary' : 'bg-accent/10 border-transparent text-foreground/40'">Admin</button>
               </div>
+            </div>
+
+            <div class="space-y-2">
+              <label class="text-[10px] font-black uppercase tracking-widest text-foreground/40 px-2">Jornada Contratada (Horas Semanales)</label>
+              <div class="grid grid-cols-2 gap-3">
+                <button @click="employeeForm.contractedHours = 40" class="py-3 rounded-xl font-black text-xs transition-all border-2" :class="employeeForm.contractedHours === 40 ? 'bg-primary/10 border-primary text-primary' : 'bg-accent/10 border-transparent text-foreground/40'">40h Completa</button>
+                <button @click="employeeForm.contractedHours = 20" class="py-3 rounded-xl font-black text-xs transition-all border-2" :class="employeeForm.contractedHours === 20 ? 'bg-primary/10 border-primary text-primary' : 'bg-accent/10 border-transparent text-foreground/40'">20h Media</button>
+              </div>
+              <input v-if="employeeForm.contractedHours !== 40 && employeeForm.contractedHours !== 20" v-model.number="employeeForm.contractedHours" type="number" class="w-full mt-2 bg-accent/10 border-none rounded-2xl px-5 py-4 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Otras horas...">
             </div>
 
             <div class="space-y-2">

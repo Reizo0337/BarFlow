@@ -20,6 +20,7 @@ import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useInvoicesStore } from '@/stores/invoices'
 import { useShiftsStore } from '@/stores/shifts'
+import { useTablesStore } from '@/stores/tables'
 
 // UI Kit
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -29,18 +30,19 @@ import StatCard from '@/components/ui/StatCard.vue'
 const authStore = useAuthStore()
 const invoicesStore = useInvoicesStore()
 const shiftsStore = useShiftsStore()
+const tablesStore = useTablesStore()
 const router = useRouter()
+
+const currency = ref('€')
 
 // State
 const employeeName = computed(() => authStore.user?.name || 'Invitado')
-const now = ref(new Date())
-let timer: any = null
 
 const hoursWorked = computed(() => {
     let totalMs = Math.max(0, shiftsStore.dailyHours)
     if (shiftsStore.currentShift) {
         const start = new Date(shiftsStore.currentShift.startTime)
-        const duration = now.value.getTime() - start.getTime()
+        const duration = shiftsStore.now.getTime() - start.getTime()
         totalMs += Math.max(0, duration)
     }
     const h = Math.floor(totalMs / 3600000).toString().padStart(2, '0')
@@ -54,11 +56,28 @@ const isOvertime = computed(() => {
     let totalMs = Math.max(0, shiftsStore.dailyHours)
     if (shiftsStore.currentShift) {
         const start = new Date(shiftsStore.currentShift.startTime)
-        const duration = now.value.getTime() - start.getTime()
+        const duration = shiftsStore.now.getTime() - start.getTime()
         totalMs += Math.max(0, duration)
     }
     const workedHours = totalMs / 3600000
     return workedHours >= contracted
+})
+
+const totalTablesCount = computed(() => {
+    return tablesStore.tableLayout.length || 24 // Fallback to 24 if no layout
+})
+
+const occupiedTablesCount = computed(() => {
+    return Object.keys(tablesStore.pendingOrders).filter(k => !k.startsWith('TICK-')).length
+})
+
+const freeTablesCount = computed(() => {
+    return Math.max(0, totalTablesCount.value - occupiedTablesCount.value)
+})
+
+const occupancyPercentage = computed(() => {
+    if (totalTablesCount.value === 0) return '0%'
+    return `${Math.round((occupiedTablesCount.value / totalTablesCount.value) * 100)}%`
 })
 
 const handleLogout = async () => {
@@ -69,13 +88,25 @@ const handleLogout = async () => {
     router.push('/portal')
 }
 
-onMounted(() => {
-    invoicesStore.fetchInvoices()
+onMounted(async () => {
+    // Fetch Settings
+    try {
+        const resSettings = await api.get('/companies/settings')
+        if (resSettings.data) currency.value = resSettings.data.currency || '€'
+    } catch (e) {
+        currency.value = '€'
+    }
+
+    await invoicesStore.fetchInvoices()
     shiftsStore.fetchCurrentShift()
-    timer = setInterval(() => { now.value = new Date() }, 1000)
+    await tablesStore.fetchPendingOrders()
+    // If layout is empty, fetch it
+    if (tablesStore.tableLayout.length === 0) {
+        await tablesStore.fetchLayout()
+    }
 })
 
-onUnmounted(() => { if (timer) clearInterval(timer) })
+onUnmounted(() => { })
 
 const startShift = () => shiftsStore.startShift()
 const stopShift = () => shiftsStore.endShift()
@@ -155,11 +186,11 @@ const handleDailyClosing = () => {
 
         <!-- Stats Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            <StatCard title="Mesas Libres" value="12" :icon="LayoutGrid" footer="De un total de 24 mesas" />
-            <StatCard title="Mesas Ocupadas" value="8" :icon="UserCheck" footer="65% de ocupación actual" />
+            <StatCard title="Mesas Libres" :value="freeTablesCount" :icon="LayoutGrid" :footer="`De un total de ${totalTablesCount} mesas`" />
+            <StatCard title="Mesas Ocupadas" :value="occupiedTablesCount" :icon="UserCheck" :footer="`${occupancyPercentage} de ocupación actual`" />
             <StatCard title="Ventas Hoy" :value="invoicesStore.todaySalesCount" :icon="Receipt" footer="Tickets procesados" />
-            <StatCard title="Recaudación" :value="`$${invoicesStore.todayRevenue.toFixed(2)}`" :icon="CircleDollarSign" variant="success" footer="Ingresos brutos" />
-            <StatCard title="Top Empleado" value="Ana García" :icon="Trophy" footer="Rendimiento destacado" />
+            <StatCard title="Recaudación" :value="`${currency}${invoicesStore.todayRevenue.toFixed(2)}`" :icon="CircleDollarSign" variant="success" footer="Ingresos brutos" />
+            <StatCard title="Tu Rendimiento" :value="employeeName" :icon="Trophy" footer="Usuario en sesión" />
             
             <button @click="handleDailyClosing" class="w-full text-left touch-manipulation group">
                 <StatCard 

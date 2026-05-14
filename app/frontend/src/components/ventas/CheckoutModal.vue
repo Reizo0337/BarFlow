@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { X, ReceiptText, Banknote, CreditCard, Printer, Loader2, Delete, Users, UserCheck } from 'lucide-vue-next'
+import { X, ReceiptText, Banknote, CreditCard, Printer, Loader2, Delete, Users, UserCheck, UserPlus, Plus } from 'lucide-vue-next'
 import api from '@/services/api'
+import AppDialog from '@/components/ui/AppDialog.vue'
 
 const props = defineProps<{
   isOpen: boolean
@@ -19,13 +20,61 @@ const shouldPrintTicket = ref(true)
 const selectedClientId = ref<number | null>(null)
 const clients = ref<any[]>([])
 const isClientSearchOpen = ref(false)
+const isCreatingClient = ref(false)
+
+const newClient = ref({
+    name: '',
+    fiscalId: '',
+    phone: ''
+})
+
+const alertDialog = ref({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'error' as any
+})
+
+const showAlert = (title: string, message: string, type: string = 'error') => {
+    alertDialog.value = { isOpen: true, title, message, type }
+}
 
 onMounted(async () => {
+  fetchClients()
+})
+
+const fetchClients = async () => {
   try {
     const res = await api.get('/clients')
     clients.value = res.data
   } catch (e) { console.error(e) }
-})
+}
+
+const toggleCreateClient = () => {
+    isCreatingClient.value = !isCreatingClient.value
+    if (isCreatingClient.value) {
+        isClientSearchOpen.value = false
+    }
+}
+
+const createClient = async () => {
+    if (!newClient.value.name || !newClient.value.fiscalId || !newClient.value.phone) {
+        showAlert('Datos Faltantes', 'Por favor, rellena los campos obligatorios (*)')
+        return
+    }
+
+    try {
+        const res = await api.post('/clients', newClient.value)
+        await fetchClients()
+        selectedClientId.value = res.data.id
+        isCreatingClient.value = false
+        isClientSearchOpen.value = false
+        newClient.value = { name: '', fiscalId: '', phone: '' }
+    } catch (e) {
+        console.error('Error creating client:', e)
+        showAlert('Error de Registro', 'No se pudo crear el cliente. Verifica que el NIF no esté duplicado.', 'error')
+    }
+}
 
 const selectedClient = computed(() => {
   return clients.value.find(c => c.id === selectedClientId.value)
@@ -83,38 +132,58 @@ const handleCheckout = () => {
 
         <!-- Client Selector -->
         <div class="mb-6 relative">
-            <span class="text-[10px] font-black uppercase tracking-widest text-foreground/40 ml-1">Asignar Cliente</span>
-            <div 
-                @click="isClientSearchOpen = !isClientSearchOpen"
-                class="mt-1 flex items-center justify-between p-3 bg-accent/10 border border-border rounded-2xl cursor-pointer hover:border-primary/50 transition-all"
-                :class="{ 'border-primary shadow-lg shadow-primary/10': isClientSearchOpen }"
-            >
-                <div class="flex items-center gap-3 overflow-hidden">
-                    <UserCheck v-if="selectedClient" class="w-5 h-5 text-primary shrink-0" />
-                    <Users v-else class="w-5 h-5 text-foreground/20 shrink-0" />
-                    <div class="truncate">
-                        <p class="text-xs font-black truncate uppercase">{{ selectedClient?.name || 'Cliente Genérico' }}</p>
-                        <p v-if="selectedClient" class="text-[10px] font-bold text-foreground/40">{{ selectedClient.fiscalId }}</p>
-                    </div>
-                </div>
-                <X v-if="selectedClientId" @click.stop="selectedClientId = null" class="w-4 h-4 text-destructive hover:scale-110 transition-all" />
+            <div class="flex items-center justify-between px-1 mb-1">
+                <span class="text-[10px] font-black uppercase tracking-widest text-foreground/40">Asignar Cliente</span>
+                <button 
+                    @click="toggleCreateClient" 
+                    class="text-[10px] font-black text-primary uppercase tracking-widest hover:underline flex items-center gap-1"
+                >
+                    <UserPlus class="w-3 h-3" /> {{ isCreatingClient ? 'Buscar' : 'Nuevo' }}
+                </button>
             </div>
 
-            <!-- Client Dropdown -->
-            <div v-if="isClientSearchOpen" class="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-2xl z-[120] max-h-48 overflow-y-auto no-scrollbar animate-in slide-in-from-top-2 duration-200">
-                <div 
-                    v-for="client in clients" 
-                    :key="client.id" 
-                    @click="selectedClientId = client.id; isClientSearchOpen = false"
-                    class="p-3 border-b border-border/50 hover:bg-primary/5 cursor-pointer transition-colors"
-                >
-                    <p class="text-xs font-black uppercase">{{ client.name }}</p>
-                    <p class="text-[10px] font-bold text-foreground/40">{{ client.fiscalId }}</p>
-                </div>
-                <div v-if="clients.length === 0" class="p-4 text-center text-[10px] font-bold text-foreground/30 italic">
-                    No hay clientes registrados.
-                </div>
+            <!-- Quick Create Form -->
+            <div v-if="isCreatingClient" class="space-y-2 p-4 bg-accent/10 rounded-2xl border border-primary/20 mt-2">
+                <input v-model="newClient.name" type="text" placeholder="Nombre completo *" class="w-full bg-card border border-border rounded-xl px-3 py-2 text-xs font-bold focus:border-primary outline-none text-foreground" />
+                <input v-model="newClient.fiscalId" type="text" placeholder="NIF / CIF *" class="w-full bg-card border border-border rounded-xl px-3 py-2 text-xs font-bold focus:border-primary outline-none text-foreground" />
+                <input v-model="newClient.phone" type="text" placeholder="Teléfono *" class="w-full bg-card border border-border rounded-xl px-3 py-2 text-xs font-bold focus:border-primary outline-none text-foreground" />
+                <button @click="createClient" class="w-full py-2 bg-primary text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all mt-2">Crear y Seleccionar</button>
             </div>
+
+            <!-- Search / Select Dropdown -->
+            <template v-else>
+                <div 
+                    @click="isClientSearchOpen = !isClientSearchOpen"
+                    class="mt-1 flex items-center justify-between p-3 bg-accent/10 border border-border rounded-2xl cursor-pointer hover:border-primary/50 transition-all"
+                    :class="{ 'border-primary shadow-lg shadow-primary/10': isClientSearchOpen }"
+                >
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <UserCheck v-if="selectedClient" class="w-5 h-5 text-primary shrink-0" />
+                        <Users v-else class="w-5 h-5 text-foreground/20 shrink-0" />
+                        <div class="truncate">
+                            <p class="text-xs font-black truncate uppercase">{{ selectedClient?.name || 'Cliente Genérico' }}</p>
+                            <p v-if="selectedClient" class="text-[10px] font-bold text-foreground/40">{{ selectedClient.fiscalId }}</p>
+                        </div>
+                    </div>
+                    <X v-if="selectedClientId" @click.stop="selectedClientId = null" class="w-4 h-4 text-destructive hover:scale-110 transition-all" />
+                </div>
+
+                <!-- Client Dropdown -->
+                <div v-if="isClientSearchOpen" class="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-2xl z-[120] max-h-48 overflow-y-auto no-scrollbar">
+                    <div 
+                        v-for="client in clients" 
+                        :key="client.id" 
+                        @click="selectedClientId = client.id; isClientSearchOpen = false"
+                        class="p-3 border-b border-border/50 hover:bg-primary/5 cursor-pointer transition-colors"
+                    >
+                        <p class="text-xs font-black uppercase">{{ client.name }}</p>
+                        <p class="text-[10px] font-bold text-foreground/40">{{ client.fiscalId }}</p>
+                    </div>
+                    <div v-if="clients.length === 0" class="p-4 text-center text-[10px] font-bold text-foreground/30 italic">
+                        No hay clientes registrados.
+                    </div>
+                </div>
+            </template>
         </div>
         
         <div class="space-y-3 mb-6">
@@ -227,6 +296,14 @@ const handleCheckout = () => {
       <button v-if="paymentMethod !== 'cash'" @click="emit('close')" class="absolute top-6 right-6 p-3 hover:bg-accent/50 rounded-2xl transition-colors">
         <X class="w-8 h-8" />
       </button>
+
+      <AppDialog 
+        :is-open="alertDialog.isOpen" 
+        :title="alertDialog.title" 
+        :message="alertDialog.message" 
+        :type="alertDialog.type"
+        @close="alertDialog.isOpen = false"
+      />
     </div>
   </div>
 </template>

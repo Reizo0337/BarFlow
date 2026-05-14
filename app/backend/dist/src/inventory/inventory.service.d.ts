@@ -11,12 +11,12 @@ export declare class InventoryService {
     constructor(productRepository: Repository<Product>, categoryRepository: Repository<Category>, fileService: FileService);
     findAll(companyId: number): Promise<Product[]>;
     findAllCategories(companyId: number): Promise<Category[]>;
-    findCategoryByName(name: string, companyId: number): Promise<Category | null>;
-    createCategory(name: string, companyId: number): Promise<Category>;
+    findCategoryByName(name: string, companyId: number, manager?: any): Promise<Category | null>;
+    createCategory(name: string, companyId: number, manager?: any): Promise<Category>;
     updateCategory(id: number, name: string, companyId: number): Promise<Category | null>;
     removeCategory(id: number, companyId: number): Promise<void>;
     findOne(id: number, companyId: number): Promise<Product | null>;
-    create(createProductDto: CreateProductDto | any, companyId: number): Promise<Product>;
+    create(createProductDto: CreateProductDto | any, companyId: number, manager?: any): Promise<Product>;
     update(id: number, updateProductDto: UpdateProductDto | any, companyId: number): Promise<Product | null>;
     bulkUpdate(companyId: number, data: {
         categoryName?: string;

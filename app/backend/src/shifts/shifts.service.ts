@@ -88,4 +88,16 @@ export class ShiftsService {
       return total + duration;
     }, 0);
   }
+
+  async updateShift(id: number, data: any, companyId: number, adminName: string): Promise<Shift> {
+    const shift = await this.shiftsRepository.findOne({ where: { id, company: { id: companyId } } });
+    if (!shift) throw new NotFoundException('Shift not found');
+
+    if (data.startTime) shift.startTime = new Date(data.startTime);
+    if (data.endTime) shift.endTime = new Date(data.endTime);
+    if (data.justification) shift.justification = data.justification;
+    shift.editedByAdmin = adminName;
+
+    return this.shiftsRepository.save(shift);
+  }
 }

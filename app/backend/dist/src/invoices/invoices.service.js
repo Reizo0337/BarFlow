@@ -37,7 +37,7 @@ let InvoicesService = class InvoicesService {
     async findAll(companyId) {
         return this.invoiceRepository.find({
             where: { company: { id: companyId } },
-            relations: ['company'],
+            relations: ['company', 'items'],
             order: { createdAt: 'DESC' }
         });
     }

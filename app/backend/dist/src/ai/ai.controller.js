@@ -24,6 +24,9 @@ let AiController = class AiController {
     async handleCommand(body, req) {
         return this.aiService.processCommand(body.text, req.user.companyId, body.history);
     }
+    async analyzeStats(body, req) {
+        return this.aiService.generateStatsSummary(body.stats, req.user.companyId);
+    }
 };
 exports.AiController = AiController;
 __decorate([
@@ -34,6 +37,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], AiController.prototype, "handleCommand", null);
+__decorate([
+    (0, common_1.Post)('analyze-stats'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AiController.prototype, "analyzeStats", null);
 exports.AiController = AiController = __decorate([
     (0, common_1.Controller)('ai'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

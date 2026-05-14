@@ -218,4 +218,45 @@ EJEMPLO DE SALIDA:
             return { ...action, status: 'error', message: e.message };
         }
     }
+
+    async generateStatsSummary(stats: any, companyId: number) {
+        const systemPrompt = `
+Eres el "BarFlow Business Analyst", un experto en inteligencia de negocio para hostelería.
+Tu tarea es analizar los datos de ventas de un establecimiento y generar un resumen ejecutivo ultra-profesional, perspicaz y accionable.
+
+REGLAS:
+1. Sé conciso pero profundo.
+2. Identifica tendencias (crecimiento, bajadas, picos).
+3. Da consejos reales para mejorar el margen o la operativa.
+4. Usa un tono motivador y experto.
+5. Formatea la respuesta con negritas y puntos clave.
+6. Responde en ESPAÑOL.
+7. PROHIBIDO el uso de emojis. Mantén un tono ejecutivo limpio.
+
+DATOS DISPONIBLES:
+${JSON.stringify(stats, null, 2)}
+`;
+
+        try {
+            const response = await axios.post(this.apiUrl, {
+                model: 'openai/gpt-4o-mini',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: "Genera el resumen ejecutivo del periodo actual." }
+                ],
+                temperature: 0.7
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${this.apiKey}`,
+                    'HTTP-Referer': 'https://barflow.app',
+                    'X-Title': 'BarFlow AI'
+                }
+            });
+
+            return { summary: response.data.choices[0].message.content };
+        } catch (error) {
+            this.logger.error('Error generating AI stats summary:', error.message);
+            return { summary: "No se pudo generar el resumen de IA en este momento. Los datos base siguen siendo precisos." };
+        }
+    }
 }

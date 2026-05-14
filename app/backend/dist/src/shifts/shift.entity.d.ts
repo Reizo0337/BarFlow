@@ -7,4 +7,6 @@ export declare class Shift {
     startTime: Date;
     endTime: Date;
     isActive: boolean;
+    justification: string;
+    editedByAdmin: string;
 }

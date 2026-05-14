@@ -20,6 +20,8 @@ let Shift = class Shift {
     startTime;
     endTime;
     isActive;
+    justification;
+    editedByAdmin;
 };
 exports.Shift = Shift;
 __decorate([
@@ -46,6 +48,14 @@ __decorate([
     (0, typeorm_1.Column)({ default: true }),
     __metadata("design:type", Boolean)
 ], Shift.prototype, "isActive", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Shift.prototype, "justification", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Shift.prototype, "editedByAdmin", void 0);
 exports.Shift = Shift = __decorate([
     (0, typeorm_1.Entity)('shifts')
 ], Shift);

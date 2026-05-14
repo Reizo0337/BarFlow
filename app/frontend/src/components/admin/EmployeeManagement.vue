@@ -24,9 +24,17 @@ const emit = defineEmits(['edit', 'delete', 'add'])
             <h3 class="font-black text-lg">{{ employee.name }}</h3>
             <span 
               class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest"
-              :class="employee.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-amber-500/10 text-amber-600'"
+              :class="[
+                employee.role === 'admin' ? 'bg-primary/10 text-primary' : 
+                employee.role === 'supervisor' ? 'bg-emerald-500/10 text-emerald-600' : 
+                'bg-amber-500/10 text-amber-600'
+              ]"
             >
-              {{ employee.role === 'admin' ? 'Administrador' : 'Camarero' }}
+              {{ 
+                employee.role === 'admin' ? 'Administrador' : 
+                employee.role === 'supervisor' ? 'Encargado' : 
+                'Camarero' 
+              }}
             </span>
           </div>
         </div>

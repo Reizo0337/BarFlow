@@ -11,4 +11,9 @@ export class AiController {
     async handleCommand(@Body() body: { text: string, history?: any[] }, @Request() req) {
         return this.aiService.processCommand(body.text, req.user.companyId, body.history);
     }
+
+    @Post('analyze-stats')
+    async analyzeStats(@Body() body: { stats: any }, @Request() req) {
+        return this.aiService.generateStatsSummary(body.stats, req.user.companyId);
+    }
 }

@@ -4,12 +4,28 @@ import { RouterLink } from 'vue-router'
 import { Home, Receipt, Settings, BarChart3, ChevronLeft, ChevronRight, Menu, ShieldCheck, Box, FileText, PieChart, Layers, Users } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
 import { useShiftsStore } from '@/stores/shifts'
+import { useAuthStore } from '@/stores/auth'
 
 const uiStore = useUIStore()
 const shiftsStore = useShiftsStore()
+const authStore = useAuthStore()
 const isHovered = ref(false)
 
 const isExpanded = computed(() => !uiStore.isSidebarCollapsed)
+
+const userRole = computed(() => authStore.user?.role || 'waiter')
+
+const canAccess = (feature: string) => {
+    if (userRole.value === 'admin') return true
+    
+    const permissions: Record<string, string[]> = {
+        waiter: ['dashboard', 'ventas', 'inventario', 'clientes'],
+        supervisor: ['dashboard', 'ventas', 'inventario', 'clientes', 'facturas', 'estadisticas']
+    }
+    
+    const allowed = permissions[userRole.value as keyof typeof permissions] || []
+    return allowed.includes(feature)
+}
 </script>
 
 <template>
@@ -62,9 +78,9 @@ const isExpanded = computed(() => !uiStore.isSidebarCollapsed)
                 <p v-if="isExpanded" class="px-4 text-[10px] font-black text-foreground/20 uppercase tracking-[0.2em] animate-in fade-in duration-500">Operativo</p>
                 <ul class="space-y-1">
                     <li v-for="link in [
-                        { to: '/app/dashboard', icon: Home, label: 'Inicio' },
-                        { to: '/app/ventas', icon: Receipt, label: 'Ventas', requiresShift: true }
-                    ]" :key="link.to">
+                        { to: '/app/dashboard', icon: Home, label: 'Inicio', id: 'dashboard' },
+                        { to: '/app/ventas', icon: Receipt, label: 'Ventas', id: 'ventas', requiresShift: true }
+                    ].filter(l => canAccess(l.id))" :key="link.to">
                         <RouterLink 
                             :to="link.to" 
                             class="flex items-center text-foreground/70 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group overflow-hidden h-12" 
@@ -87,11 +103,11 @@ const isExpanded = computed(() => !uiStore.isSidebarCollapsed)
                 <p v-if="isExpanded" class="px-4 text-[10px] font-black text-foreground/20 uppercase tracking-[0.2em] animate-in fade-in duration-500">Gestión</p>
                 <ul class="space-y-1">
                     <li v-for="link in [
-                        { to: '/app/inventario', icon: Box, label: 'Inventario' },
-                        { to: '/app/facturas', icon: FileText, label: 'Facturas' },
-                        { to: '/app/clientes', icon: Users, label: 'Clientes' },
-                        { to: '/app/admin', icon: ShieldCheck, label: 'Panel Admin' }
-                    ]" :key="link.to">
+                        { to: '/app/inventario', icon: Box, label: 'Inventario', id: 'inventario' },
+                        { to: '/app/facturas', icon: FileText, label: 'Facturas', id: 'facturas' },
+                        { to: '/app/clientes', icon: Users, label: 'Clientes', id: 'clientes' },
+                        { to: '/app/admin', icon: ShieldCheck, label: 'Panel Admin', id: 'admin' }
+                    ].filter(l => canAccess(l.id))" :key="link.to">
                         <RouterLink 
                             :to="link.to" 
                             class="flex items-center text-foreground/70 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group overflow-hidden h-12" 
@@ -111,9 +127,9 @@ const isExpanded = computed(() => !uiStore.isSidebarCollapsed)
                 <p v-if="isExpanded" class="px-4 text-[10px] font-black text-foreground/20 uppercase tracking-[0.2em] animate-in fade-in duration-500">Inteligencia</p>
                 <ul class="space-y-1">
                     <li v-for="link in [
-                        { to: '/app/estadisticas', icon: BarChart3, label: 'Estadísticas' },
-                        { to: '/app/reportes', icon: PieChart, label: 'Reportes' }
-                    ]" :key="link.to">
+                        { to: '/app/estadisticas', icon: BarChart3, label: 'Estadísticas', id: 'estadisticas' },
+                        { to: '/app/reportes', icon: PieChart, label: 'Reportes', id: 'reportes' }
+                    ].filter(l => canAccess(l.id))" :key="link.to">
                         <RouterLink 
                             :to="link.to" 
                             class="flex items-center text-foreground/70 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group overflow-hidden h-12" 

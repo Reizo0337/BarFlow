@@ -12,4 +12,5 @@ export declare class ShiftsService {
     getCurrentShift(userId: number, companyId: number): Promise<Shift | null>;
     getCompanyShifts(companyId: number): Promise<Shift[]>;
     getUserDailyHours(userId: number): Promise<number>;
+    updateShift(id: number, data: any, companyId: number, adminName: string): Promise<Shift>;
 }

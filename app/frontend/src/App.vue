@@ -41,12 +41,17 @@ import Header from './components/layout/Header.vue'
 import Sidebar from './components/layout/Sidebar.vue'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
+import { useShiftsStore } from '@/stores/shifts'
 
 const uiStore = useUIStore()
 const authStore = useAuthStore()
+const shiftsStore = useShiftsStore()
 
 onMounted(() => {
   authStore.fetchEmployees()
+  if (authStore.user) {
+    shiftsStore.fetchCurrentShift()
+  }
 })
 </script>
 

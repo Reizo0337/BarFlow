@@ -23,19 +23,22 @@ let ShiftsController = class ShiftsController {
         this.shiftsService = shiftsService;
     }
     async startShift(req) {
-        return this.shiftsService.startShift(req.user.sub, req.user.companyId);
+        return this.shiftsService.startShift(req.user.userId, req.user.companyId);
     }
     async endShift(req) {
-        return this.shiftsService.endShift(req.user.sub, req.user.companyId);
+        return this.shiftsService.endShift(req.user.userId, req.user.companyId);
     }
     async getCurrentShift(req) {
-        return this.shiftsService.getCurrentShift(req.user.sub, req.user.companyId);
+        return this.shiftsService.getCurrentShift(req.user.userId, req.user.companyId);
     }
     async getCompanyShifts(req) {
         return this.shiftsService.getCompanyShifts(req.user.companyId);
     }
     async getDailyHours(req) {
-        return this.shiftsService.getUserDailyHours(req.user.sub);
+        return this.shiftsService.getUserDailyHours(req.user.userId);
+    }
+    async updateShift(req, body, id) {
+        return this.shiftsService.updateShift(+id, body, req.user.companyId, req.user.username || 'Admin');
     }
 };
 exports.ShiftsController = ShiftsController;
@@ -74,6 +77,15 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ShiftsController.prototype, "getDailyHours", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, String]),
+    __metadata("design:returntype", Promise)
+], ShiftsController.prototype, "updateShift", null);
 exports.ShiftsController = ShiftsController = __decorate([
     (0, swagger_1.ApiTags)('shifts'),
     (0, swagger_1.ApiBearerAuth)(),

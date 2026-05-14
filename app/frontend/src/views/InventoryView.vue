@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Layers, Tag, Plus, Box, Search, Filter, Wand2 } from 'lucide-vue-next'
+import { Layers, Tag, Plus, Box, Search, Filter, Wand2, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { useInventoryStore } from '@/stores/inventory'
 import { INVENTORY_TEMPLATE } from '@/constants/inventory-template'
 
@@ -71,6 +71,17 @@ const filteredInventory = computed(() => {
   })
 })
 
+const currentPage = ref(1)
+const itemsPerPage = 15
+
+const paginatedProducts = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage
+    const end = start + itemsPerPage
+    return filteredInventory.value.slice(start, end)
+})
+
+const totalPages = computed(() => Math.ceil(filteredInventory.value.length / itemsPerPage))
+
 const filteredCategories = computed(() => {
   return inventoryStore.categories.filter(cat => 
     cat.name.toLowerCase().includes(searchQuery.value.toLowerCase())
@@ -113,10 +124,10 @@ const getProductCountByCategory = (categoryId: number) => {
         <p class="text-foreground/40 font-medium max-w-md">Control analítico de existencias, reposición inteligente y optimización de costes en tiempo real.</p>
       </div>
       
-      <div class="flex flex-wrap gap-4">
-        <BaseButton variant="outline" @click="showTemplateDialog = true">
-          <template #icon-left><Wand2 class="w-4 h-4" /></template>
-          Aplicar Plantilla
+      <div class="flex flex-wrap gap-3 md:ml-auto">
+        <BaseButton variant="outline" size="sm" @click="showTemplateDialog = true" class="opacity-60 hover:opacity-100">
+          <template #icon-left><Wand2 class="w-3 h-3" /></template>
+          Plantilla
         </BaseButton>
         <BaseButton variant="secondary" @click="showCategoryModal = true">
           <template #icon-left><Tag class="w-4 h-4" /></template>
@@ -196,8 +207,34 @@ const getProductCountByCategory = (categoryId: number) => {
 
       <!-- Content Area -->
       <div class="flex-1 p-8">
-        <ProductTable v-if="viewMode === 'products'" :products="filteredInventory" @edit="openEditModal" />
+        <ProductTable v-if="viewMode === 'products'" :products="paginatedProducts" @edit="openEditModal" />
         <CategoryTable v-else :categories="filteredCategories" :get-product-count="getProductCountByCategory" />
+      </div>
+
+      <!-- Pagination Footer (only for products) -->
+      <div v-if="viewMode === 'products'" class="p-8 border-t border-border flex items-center justify-between bg-accent/5">
+        <p class="text-[10px] font-black uppercase tracking-widest text-foreground/30">
+          Mostrando {{ paginatedProducts.length }} de {{ filteredInventory.length }} productos
+        </p>
+        <div class="flex items-center gap-2">
+            <BaseButton 
+                variant="outline" 
+                size="sm" 
+                :disabled="currentPage === 1"
+                @click="currentPage--"
+            >
+                <ChevronLeft class="w-4 h-4" />
+            </BaseButton>
+            <span class="text-xs font-black px-4">PÁGINA {{ currentPage }} DE {{ totalPages || 1 }}</span>
+            <BaseButton 
+                variant="outline" 
+                size="sm" 
+                :disabled="currentPage >= totalPages"
+                @click="currentPage++"
+            >
+                <ChevronRight class="w-4 h-4" />
+            </BaseButton>
+        </div>
       </div>
     </BaseCard>
   </div>

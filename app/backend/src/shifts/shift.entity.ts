@@ -21,4 +21,10 @@ export class Shift {
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ nullable: true })
+  justification: string;
+
+  @Column({ nullable: true })
+  editedByAdmin: string;
 }

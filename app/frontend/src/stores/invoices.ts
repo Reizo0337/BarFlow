@@ -29,18 +29,32 @@ export const useInvoicesStore = defineStore('invoices', () => {
     }
 
     const todayInvoices = computed(() => {
-        const today = new Date().toISOString().split('T')[0]
-        return invoices.value.filter(inv => inv.createdAt.startsWith(today))
+        const todayStr = new Date().toISOString().split('T')[0]
+
+        return invoices.value.filter(inv => {
+            if (!inv.createdAt) return false
+            // Compare only the YYYY-MM-DD part
+            const invDateStr = new Date(inv.createdAt).toISOString().split('T')[0]
+            return invDateStr === todayStr
+        })
     })
 
     const todayRevenue = computed(() => {
         return todayInvoices.value
-            .filter(inv => inv.type === 'out' && inv.status === 'paid')
+            .filter(inv => {
+                const type = (inv as any).type?.toLowerCase()
+                // Backend uses fiscalStatus: 'normal' for valid invoices
+                const status = (inv as any).fiscalStatus || (inv as any).status
+                return (type === 'sale' || type === 'out' || type === 'purchase') && (status === 'paid' || status === 'normal')
+            })
             .reduce((sum, inv) => sum + Number(inv.amount), 0)
     })
 
     const todaySalesCount = computed(() => {
-        return todayInvoices.value.filter(inv => inv.type === 'out').length
+        return todayInvoices.value.filter(inv => {
+            const type = (inv as any).type?.toLowerCase()
+            return type === 'sale' || type === 'out' || type === 'purchase'
+        }).length
     })
 
     return {
